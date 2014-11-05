@@ -11,36 +11,47 @@
  */
 namespace Bluz\View\Helper;
 
-use Bluz\Application\Application;
-use Bluz\Application\Exception\ForbiddenException;
+use Bluz\Acl\AclException;
 use Bluz\View\View;
 
 return
     /**
-     * Dispatch controller View Helper
+     * dispatch
      *
-     * Example of usage:
-     *     $this->dispatch($module, $controller, array $params);
+     * <code>
+     * $this->dispatch($module, $controller, array $params);
+     * </code>
      *
-     * @var View $this
      * @param string $module
      * @param string $controller
      * @param array $params
-     * @return View|string|null
+     * @return View|null
      */
     function ($module, $controller, $params = array()) {
-        try {
-            $view = Application::getInstance()->dispatch($module, $controller, $params);
-        } catch (ForbiddenException $e) {
-            // nothing for ForbiddenException
+    /** @var View $this */
+    $application = app();
+    try {
+        $view = $application->dispatch($module, $controller, $params);
+    } catch (AclException $e) {
+        // nothing for Acl exception
+        return null;
+    } catch (\Exception $e) {
+        if (app()->isDebug()) {
+            // exception message for developers
+            return
+                '<div class="alert alert-error">' .
+                '<strong>Dispatch of "' . $module . '/' . $controller . '"</strong>: ' .
+                $e->getMessage() .
+                '</div>';
+        } else {
+            // nothing for production
             return null;
-        } catch (\Exception $e) {
-            return $this->exception($e);
         }
+    }
 
-        // run closure
-        if ($view instanceof \Closure) {
-            return $view();
-        }
-        return $view;
+    // run closure
+    if ($view instanceof \Closure) {
+        return $view();
+    }
+    return $view;
     };

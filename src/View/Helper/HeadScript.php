@@ -11,22 +11,34 @@
  */
 namespace Bluz\View\Helper;
 
-use Bluz\Application\Application;
-use Bluz\Proxy\Layout;
+use Bluz\View\View;
 
 return
     /**
-     * Set or generate <script> code for <head>
-     *
-     * @var Layout $this
      * @param string $script
-     * @return string|null
+     * @return string|void
      */
     function ($script = null) {
-        if (Application::getInstance()->hasLayout()) {
-            return Layout::headScript($script);
+    /** @var View $this */
+    if (app()->hasLayout()) {
+        // it's stack for <head>
+        $view = app()->getLayout();
+
+        $headScripts = $view->system('headScripts') ? : [];
+
+        if (null === $script) {
+            $headScripts = array_unique($headScripts);
+            // clear system vars
+            $view->system('headScripts', []);
+
+            $headScripts = array_map([$this, 'script'], $headScripts);
+            return join("\n", $headScripts);
         } else {
-            // it's just alias to script() call
-            return $this->script($script);
+            $headScripts[] = $script;
+            $view->system('headScripts', $headScripts);
         }
+    } else {
+        // it's just alias to script() call
+        return $this->script($script);
+    }
     };

@@ -12,7 +12,6 @@
 namespace Bluz\Db\Query;
 
 use Bluz\Db\Exception\DbException;
-use Bluz\Proxy\Db;
 
 /**
  * Builder of SELECT queries
@@ -38,7 +37,7 @@ class Select extends AbstractBuilder
      * {@inheritdoc}
      *
      * @param null $fetchType
-     * @return mixed
+     * @return array|mixed
      */
     public function execute($fetchType = null)
     {
@@ -48,20 +47,20 @@ class Select extends AbstractBuilder
 
         switch ($fetchType) {
             case (!is_int($fetchType)):
-                return Db::fetchObjects($this->getSQL(), $this->params, $fetchType);
+                return $this->getAdapter()->fetchObjects($this->getSQL(), $this->params, $fetchType);
             case \PDO::FETCH_CLASS:
-                return Db::fetchObjects($this->getSQL(), $this->params);
+                return $this->getAdapter()->fetchObjects($this->getSQL(), $this->params);
             case \PDO::FETCH_ASSOC:
             default:
-                return Db::fetchAll($this->getSQL(), $this->params);
+                return $this->getAdapter()->fetchAll($this->getSQL(), $this->params);
         }
     }
 
     /**
      * Setup fetch type, any of PDO, or any Class
      *
-     * @param string $fetchType
-     * @return Select instance
+     * @param $fetchType
+     * @return Select This QueryBuilder instance.
      */
     public function setFetchType($fetchType)
     {
@@ -71,19 +70,19 @@ class Select extends AbstractBuilder
 
     /**
      * {@inheritdoc}
-     *
-     * @return string
      */
     public function getSql()
     {
         $query = "SELECT " . implode(', ', $this->sqlParts['select']) . " FROM ";
 
         $fromClauses = array();
+        $knownAliases = array();
 
         // Loop through all FROM clauses
         foreach ($this->sqlParts['from'] as $from) {
+            $knownAliases[$from['alias']] = true;
             $fromClause = $from['table'] . ' ' . $from['alias']
-                . $this->getSQLForJoins($from['alias']);
+                . $this->getSQLForJoins($from['alias'], $knownAliases);
 
             $fromClauses[$from['alias']] = $fromClause;
         }
@@ -111,8 +110,7 @@ class Select extends AbstractBuilder
      *         ->leftJoin('u', 'phonenumbers', 'p', 'u.id = p.user_id');
      *
      * @param mixed $select The selection expressions.
-     * @param mixed $select,... The selection expressions.
-     * @return Select instance
+     * @return Select This QueryBuilder instance.
      */
     public function select($select)
     {
@@ -133,8 +131,7 @@ class Select extends AbstractBuilder
      *         ->leftJoin('u', 'phonenumbers', 'u.id = p.user_id');
      *
      * @param mixed $select The selection expression.
-     * @param mixed $select,... The selection expression.
-     * @return Select instance
+     * @return Select This QueryBuilder instance.
      */
     public function addSelect($select)
     {
@@ -157,7 +154,7 @@ class Select extends AbstractBuilder
      * @param string $join The table name to join
      * @param string $alias The alias of the join table
      * @param string $condition The condition for the join
-     * @return Select instance
+     * @return self instance
      */
     public function join($fromAlias, $join, $alias, $condition = null)
     {
@@ -178,7 +175,7 @@ class Select extends AbstractBuilder
      * @param string $join The table name to join
      * @param string $alias The alias of the join table
      * @param string $condition The condition for the join
-     * @return Select instance
+     * @return self instance
      */
     public function innerJoin($fromAlias, $join, $alias, $condition = null)
     {
@@ -212,7 +209,7 @@ class Select extends AbstractBuilder
      * @param string $join The table name to join
      * @param string $alias The alias of the join table
      * @param string $condition The condition for the join
-     * @return Select instance
+     * @return self instance
      */
     public function leftJoin($fromAlias, $join, $alias, $condition = null)
     {
@@ -246,7 +243,7 @@ class Select extends AbstractBuilder
      * @param string $join The table name to join
      * @param string $alias The alias of the join table
      * @param string $condition The condition for the join
-     * @return Select instance
+     * @return self instance
      */
     public function rightJoin($fromAlias, $join, $alias, $condition = null)
     {
@@ -277,9 +274,8 @@ class Select extends AbstractBuilder
      *         ->from('users', 'u')
      *         ->groupBy('u.id');
      *
-     * @param array $groupBy The grouping expression
-     * @param array $groupBy,... The grouping expression
-     * @return Select instance
+     * @param mixed $groupBy The grouping expression.
+     * @return Select This QueryBuilder instance.
      */
     public function groupBy($groupBy)
     {
@@ -289,7 +285,7 @@ class Select extends AbstractBuilder
 
         $groupBy = is_array($groupBy) ? $groupBy : func_get_args();
 
-        return $this->addQueryPart('groupBy', $groupBy, false);
+        return $this->addQueryPart('groupBy', $groupBy);
     }
 
     /**
@@ -303,9 +299,8 @@ class Select extends AbstractBuilder
      *         ->groupBy('u.lastLogin');
      *         ->addGroupBy('u.createdAt')
      *
-     * @param mixed $groupBy The grouping expression
-     * @param mixed $groupBy,... The grouping expression
-     * @return Select instance
+     * @param mixed $groupBy The grouping expression.
+     * @return Select This QueryBuilder instance.
      */
     public function addGroupBy($groupBy)
     {
@@ -319,58 +314,87 @@ class Select extends AbstractBuilder
     }
 
     /**
+     * Specifies an ordering for the query results
+     * Replaces any previously specified orderings, if any
+     *
+     * @param string $sort The ordering expression.
+     * @param string $order The ordering direction.
+     * @return Select This QueryBuilder instance.
+     */
+    public function orderBy($sort, $order = 'ASC')
+    {
+        $order = strtoupper($order);
+        $order = ('ASC' == $order ? 'ASC' : 'DESC');
+        return $this->addQueryPart('orderBy', $sort . ' ' . $order);
+    }
+
+    /**
+     * Adds an ordering to the query results
+     *
+     * @param string $sort The ordering expression.
+     * @param string $order The ordering direction.
+     * @return Select This QueryBuilder instance.
+     */
+    public function addOrderBy($sort, $order = 'ASC')
+    {
+        $order = strtoupper($order);
+        $order = ('ASC' == $order ? 'ASC' : 'DESC');
+        return $this->addQueryPart('orderBy', $sort . ' ' . $order, true);
+    }
+
+    /**
      * Specifies a restriction over the groups of the query.
      * Replaces any previous having restrictions, if any.
      *
-     * @param mixed $condition,... The query restriction predicates
+     * @param mixed $condition The query restriction predicates
      * @return Select
      */
-    public function having()
+    public function having($condition)
     {
         $condition = $this->prepareCondition(func_get_args());
-        return $this->addQueryPart('having', $condition, false);
+        return $this->addQueryPart('having', $condition);
     }
 
     /**
      * Adds a restriction over the groups of the query, forming a logical
      * conjunction with any existing having restrictions
      *
-     * @param mixed $condition,... The query restriction predicates
+     * @param mixed $condition The restriction to append
      * @return Select
      */
-    public function andHaving()
+    public function andHaving($condition)
     {
         $condition = $this->prepareCondition(func_get_args());
         $having = $this->getQueryPart('having');
 
-        if ($having instanceof CompositeBuilder && $having->getType() == 'AND') {
+        if ($having instanceof CompositeBuilder) {
             $having->add($condition);
         } else {
             $having = new CompositeBuilder([$having, $condition]);
         }
 
-        return $this->addQueryPart('having', $having, false);
+        return $this->addQueryPart('having', $having);
     }
 
     /**
      * Adds a restriction over the groups of the query, forming a logical
      * disjunction with any existing having restrictions.
      *
-     * @param mixed $condition,... The query restriction predicates
+     * @param mixed $condition The restriction to add
      * @return Select
      */
-    public function orHaving()
+    public function orHaving($condition)
     {
         $condition = $this->prepareCondition(func_get_args());
         $having = $this->getQueryPart('having');
 
-        if ($having instanceof CompositeBuilder && $having->getType() == 'OR') {
+        if ($having instanceof CompositeBuilder) {
             $having->add($condition);
         } else {
             $having = new CompositeBuilder([$having, $condition], 'OR');
         }
 
-        return $this->addQueryPart('having', $having, false);
+        return $this->addQueryPart('having', $having);
     }
 
     /**
@@ -392,8 +416,7 @@ class Select extends AbstractBuilder
     /**
      * Generate SQL string for JOINs
      *
-     * @internal
-     * @param string $fromAlias,... Alias of table
+     * @param $fromAlias
      * @return string
      */
     protected function getSQLForJoins($fromAlias)

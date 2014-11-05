@@ -15,29 +15,26 @@ use Bluz\View\View;
 
 return
     /**
-     * Generate HTML for <input type="radio">
-     *
      * @author The-Who
      *
-     * @var View $this
      * @param string $name
      * @param string|null $value
      * @param bool $checked
      * @param array $attributes
-     * @return string
+     * @return \Closure
      */
     function ($name, $value = null, $checked = false, array $attributes = []) {
-        /** @var View $this */
-        if (true === $checked) {
-            $attributes['checked'] = 'checked';
-        }
+    /** @var View $this */
+    if (true === $checked) {
+        $attributes['checked'] = 'checked';
+    }
 
-        if (null !== $value) {
-            $attributes['value'] = $value;
-        }
+    if (null !== $value) {
+        $attributes['value'] = $value;
+    }
 
-        $attributes['name'] = $name;
-        $attributes['type'] = 'radio';
+    $attributes['name'] = $name;
+    $attributes['type'] = 'radio';
 
-        return '<input ' . $this->attributes($attributes) . '/>';
+    return '<input ' . $this->attributes($attributes) . '/>';
     };

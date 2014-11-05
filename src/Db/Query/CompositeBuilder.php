@@ -11,6 +11,8 @@
  */
 namespace Bluz\Db\Query;
 
+use Bluz\Db\Db;
+
 /**
  * Class Expression
  * @package Bluz\Db\Query

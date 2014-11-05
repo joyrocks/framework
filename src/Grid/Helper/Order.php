@@ -11,6 +11,7 @@
  */
 namespace Bluz\Grid\Helper;
 
+use Bluz\Application\Application;
 use Bluz\Grid;
 
 return
@@ -18,33 +19,33 @@ return
      * @return string|null $url
      */
     function ($column, $order = null, $defaultOrder = Grid\Grid::ORDER_ASC, $reset = true) {
-        /**
-         * @var Grid\Grid $this
-         */
-        if (!in_array($column, $this->getAllowOrders())) {
-            return null;
-        }
+    /**
+     * @var Grid\Grid $this
+     */
+    if (!in_array($column, $this->getAllowOrders())) {
+        return null;
+    }
 
-        $orders = $this->getOrders();
+    $orders = $this->getOrders();
 
-        // change order
-        if (null === $order) {
-            if (isset($orders[$column])) {
-                $order = ($orders[$column] == Grid\Grid::ORDER_ASC) ?
-                    Grid\Grid::ORDER_DESC : Grid\Grid::ORDER_ASC;
-            } else {
-                $order = $defaultOrder;
-            }
-        }
-
-        // reset ot additional sort collumn
-        if ($reset) {
-            $rewrite = ['orders' => []];
+    // change order
+    if (null === $order) {
+        if (isset($orders[$column])) {
+            $order = ($orders[$column] == Grid\Grid::ORDER_ASC) ?
+                Grid\Grid::ORDER_DESC : Grid\Grid::ORDER_ASC;
         } else {
-            $rewrite = ['orders' => $orders];
+            $order = $defaultOrder;
         }
+    }
 
-        $rewrite['orders'][$column] = $order;
+    // reset ot additional sort collumn
+    if ($reset) {
+        $rewrite = ['orders' => []];
+    } else {
+        $rewrite = ['orders' => $orders];
+    }
 
-        return $this->getUrl($rewrite);
+    $rewrite['orders'][$column] = $order;
+
+    return $this->getUrl($rewrite);
     };

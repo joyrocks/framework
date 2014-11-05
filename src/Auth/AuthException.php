@@ -11,16 +11,16 @@
  */
 namespace Bluz\Auth;
 
-use Bluz\Application\Exception\UnauthorizedException;
+use Bluz\Common\Exception;
 
 /**
- * Auth Exception
+ * Exception
  *
  * @package Bluz\Auth
  *
  * @author   Anton Shevchuk
  * @created  12.07.11 16:46
  */
-class AuthException extends UnauthorizedException
+class AuthException extends Exception
 {
 }

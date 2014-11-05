@@ -12,7 +12,7 @@
 namespace Bluz\Db\Query;
 
 /**
- * Builder of UPDATE queries
+ * Builder of SELECT queries
  *
  * @package Bluz\Db\Query
  */
@@ -20,13 +20,10 @@ class Update extends AbstractBuilder
 {
     use Traits\Set;
     use Traits\Where;
-    use Traits\Order;
     use Traits\Limit;
 
     /**
      * {@inheritdoc}
-     *
-     * @return string
      */
     public function getSql()
     {
@@ -51,10 +48,11 @@ class Update extends AbstractBuilder
      *         ->where('id = ?');
      *
      * @param string $table The table whose rows are subject to the update
-     * @return Update instance
+     * @return self instance.
      */
     public function update($table)
     {
-        return $this->setFromQueryPart($table);
+        $table = $this->getAdapter()->quoteIdentifier($table);
+        return $this->addQueryPart('from', array('table' => $table));
     }
 }

@@ -11,15 +11,20 @@
  */
 namespace Bluz\Application\Exception;
 
-use Bluz\Common\Exception\CommonException;
+use Bluz\Common\Exception;
 
 /**
- * Application Exception
+ * Exception
  *
  * @package  Bluz\Application\Exception
  * @author   Anton Shevchuk
  * @created  17.12.12 16:46
  */
-class ApplicationException extends CommonException
+class ApplicationException extends Exception
 {
+    /**
+     * Used as default HTTP code for exceptions
+     * @var int
+     */
+    protected $code = 500;
 }

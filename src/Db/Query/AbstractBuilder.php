@@ -11,7 +11,9 @@
  */
 namespace Bluz\Db\Query;
 
-use Bluz\Proxy\Db;
+use Bluz\Db\Db;
+use Bluz\Db\Exception\DbException;
+use Bluz\Db\Query\CompositeBuilder;
 
 /**
  * Query Builders classes is responsible to dynamically create SQL queries
@@ -23,6 +25,12 @@ use Bluz\Proxy\Db;
  */
 abstract class AbstractBuilder
 {
+    /**
+     * Instance of Db
+     * @var Db
+     */
+    protected $adapter = null;
+
     /**
      * Known table aliases
      * @var array
@@ -56,7 +64,7 @@ abstract class AbstractBuilder
     /**
      * @var array The parameter type map of this query
      */
-    protected $types = array();
+    protected $paramTypes = array();
 
     /**
      * Execute this query using the bound parameters and their types
@@ -65,9 +73,38 @@ abstract class AbstractBuilder
      */
     public function execute()
     {
-        return Db::query($this->getSQL(), $this->params, $this->types);
+        return $this->getAdapter()->query($this->getSQL(), $this->params, $this->paramTypes);
     }
-    
+
+    /**
+     * Sets a DB adapter.
+     *
+     * @param Db $adapter DB adapter for table to use
+     * @return self instance
+     * @throws DbException if default DB adapter not initiated
+     *                     on \Bluz\Db::$adapter.
+     */
+    public function setAdapter($adapter = null)
+    {
+        if (null == $adapter) {
+            $this->adapter = Db::getDefaultAdapter();
+        }
+        return $this;
+    }
+
+    /**
+     * Gets a DB adapter.
+     *
+     * @return Db
+     */
+    public function getAdapter()
+    {
+        if (!$this->adapter) {
+            $this->setAdapter();
+        }
+        return $this->adapter;
+    }
+
     /**
      * Return the complete SQL string formed by the current specifications
      *
@@ -129,7 +166,7 @@ abstract class AbstractBuilder
         }
 
         $this->params[$key] = $value;
-        $this->types[$key] = $type;
+        $this->paramTypes[$key] = $type;
 
         return $this;
     }
@@ -154,7 +191,7 @@ abstract class AbstractBuilder
      */
     public function setParameters(array $params, array $types = array())
     {
-        $this->types = $types;
+        $this->paramTypes = $types;
         $this->params = $params;
 
         return $this;
@@ -188,8 +225,8 @@ abstract class AbstractBuilder
      * 'groupBy', 'having' and 'orderBy'
      *
      * @param string  $sqlPartName
-     * @param string|array  $sqlPart
-     * @param bool $append
+     * @param string  $sqlPart
+     * @param boolean $append
      * @return self instance
      */
     protected function addQueryPart($sqlPartName, $sqlPart, $append = false)
@@ -204,7 +241,7 @@ abstract class AbstractBuilder
         if ($append) {
             if ($sqlPartName == "orderBy" || $sqlPartName == "groupBy"
                 || $sqlPartName == "select" || $sqlPartName == "set") {
-                foreach ((array)$sqlPart as $part) {
+                foreach ($sqlPart as $part) {
                     $this->sqlParts[$sqlPartName][] = $part;
                 }
             } elseif ($isArray && is_array($sqlPart[key($sqlPart)])) {
@@ -215,9 +252,12 @@ abstract class AbstractBuilder
             } else {
                 $this->sqlParts[$sqlPartName] = $sqlPart;
             }
-        } else {
-            $this->sqlParts[$sqlPartName] = $sqlPart;
+
+            return $this;
         }
+
+        $this->sqlParts[$sqlPartName] = $sqlPart;
+
         return $this;
     }
 
@@ -247,21 +287,10 @@ abstract class AbstractBuilder
     }
 
     /**
-     * setFromQueryPart
-     *
-     * @param string $table
-     * @return self instance
-     */
-    protected function setFromQueryPart($table)
-    {
-        $table = Db::quoteIdentifier($table);
-        return $this->addQueryPart('from', array('table' => $table), false);
-    }
-
-    /**
      * Prepare condition
      *
      * @param array $args
+     * @internal param $condition
      * @return string
      */
     protected function prepareCondition($args = array())

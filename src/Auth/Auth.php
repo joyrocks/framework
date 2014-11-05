@@ -12,8 +12,6 @@
 namespace Bluz\Auth;
 
 use Bluz\Common\Options;
-use Bluz\Proxy\Request;
-use Bluz\Proxy\Session;
 
 /**
  * Auth class
@@ -28,40 +26,35 @@ class Auth
     use Options;
 
     /**
-     * Setup identity
+     * setup identity
+     *
      * @param EntityInterface $identity
-     * @return void
+     * @return Auth
      */
     public function setIdentity(EntityInterface $identity)
     {
-        // save identity to session
-        Session::set('auth:identity', $identity);
-        // save user agent to session
-        Session::set('auth:agent', Request::getServer('HTTP_USER_AGENT'));
+        app()->getSession()->identity = $identity;
+        return $this;
     }
 
     /**
-     * Return identity if user agent is correct
+     * return identity
+     *
      * @return EntityInterface|null
      */
     public function getIdentity()
     {
-        // check user agent
-        if (Session::get('auth:agent') == Request::getServer('HTTP_USER_AGENT')) {
-            return Session::get('auth:identity');
-        } else {
-            $this->clearIdentity();
-            return null;
-        }
+        return app()->getSession()->identity;
     }
 
     /**
-     * Clear identity and user agent information
-     * @return void
+     * clear identity
+     *
+     * @return Auth
      */
     public function clearIdentity()
     {
-        Session::delete('auth:identity');
-        Session::delete('auth:agent');
+        app()->getSession()->identity = null;
+        return $this;
     }
 }

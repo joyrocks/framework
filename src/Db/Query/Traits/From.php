@@ -11,9 +11,6 @@
  */
 namespace Bluz\Db\Query\Traits;
 
-use Bluz\Db\Query\Delete;
-use Bluz\Db\Query\Select;
-
 /**
  * From Trait, required for:
  *  - Select Builder
@@ -21,27 +18,25 @@ use Bluz\Db\Query\Select;
  *
  * @package Bluz\Db\Query\Traits
  *
- * @property array $aliases
- * @method Select|Delete addQueryPart(string $sqlPartName, mixed $sqlPart, $append = false)
- *
  * @author   Anton Shevchuk
  * @created  17.06.13 10:46
  */
-trait From
-{
+trait From {
+
     /**
-     * Set FROM
-     *
      * Create and add a query root corresponding to the table identified by the
      * given alias, forming a cartesian product with any existing query roots
+     *
+     * <code>
      *     $sb = new SelectBuilder();
      *     $sb
      *         ->select('u.id')
      *         ->from('users', 'u')
+     * </code>
      *
      * @param string $from   The table
      * @param string $alias  The alias of the table
-     * @return Select|Delete
+     * @return $this
      */
     public function from($from, $alias)
     {

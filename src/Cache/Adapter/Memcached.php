@@ -12,8 +12,7 @@
 namespace Bluz\Cache\Adapter;
 
 use Bluz\Cache\Cache;
-use Bluz\Common\Exception\ComponentException;
-use Bluz\Common\Exception\ConfigurationException;
+use Bluz\Cache\CacheException;
 
 /**
  * Class Memcached
@@ -25,29 +24,28 @@ class Memcached extends AbstractAdapter
      * Instance of memcached
      * @var \Memcached
      */
-    protected $handler = null;
+    protected $memcached = null;
 
     /**
      * Check and setup memcached servers
-     *
      * @param array $settings
-     * @throws ComponentException
-     * @throws ConfigurationException
+     * @throws \Bluz\Cache\CacheException
      */
     public function __construct($settings = array())
     {
-        // check Memcached extension
+        // check extension
         if (!extension_loaded('memcached')) {
-            throw new ComponentException(
+            throw new CacheException(
                 "Memcached extension not installed/enabled.
                 Install and/or enable memcached extension. See phpinfo() for more information"
             );
         }
 
-        // check Memcached settings
+        // check settings
         if (!is_array($settings) or empty($settings) or !isset($settings['servers'])) {
-            throw new ConfigurationException(
-                "Memcached configuration is missed. Please check 'cache' configuration section"
+            throw new CacheException(
+                "Memcached configuration is missed.
+                Please check 'cache' configuration section"
             );
         }
 
@@ -61,21 +59,16 @@ class Memcached extends AbstractAdapter
      */
     public function getHandler()
     {
-        if (!$this->handler) {
-
-            $persistentId = isset($this->settings['persistent']) ? $this->settings['persistent'] : null;
-
-            $this->handler = new \Memcached($persistentId);
-
-            if (!$this->handler->getServerList()) {
-                $this->handler->addServers($this->settings['servers']);
-            }
-
+        if (!$this->memcached) {
+            $this->memcached = new \Memcached();
+            $this->memcached->addServers($this->settings['servers']);
             if (isset($this->settings['options'])) {
-                $this->handler->setOptions($this->settings['options']);
+                foreach ($this->settings['options'] as $key => $value) {
+                    $this->memcached->setOption($key, $value);
+                }
             }
         }
-        return $this->handler;
+        return $this->memcached;
     }
 
     /**
@@ -95,7 +88,7 @@ class Memcached extends AbstractAdapter
      * @param string $id
      * @param mixed $data
      * @param int $ttl
-     * @return bool
+     * @return bool|mixed
      */
     protected function doAdd($id, $data, $ttl = Cache::TTL_NO_EXPIRY)
     {
@@ -108,7 +101,7 @@ class Memcached extends AbstractAdapter
      * @param string $id
      * @param mixed $data
      * @param int $ttl
-     * @return bool
+     * @return bool|mixed
      */
     protected function doSet($id, $data, $ttl = Cache::TTL_NO_EXPIRY)
     {
@@ -119,7 +112,7 @@ class Memcached extends AbstractAdapter
      * {@inheritdoc}
      *
      * @param string $id
-     * @return bool
+     * @return bool|mixed
      */
     protected function doContains($id)
     {
@@ -131,7 +124,7 @@ class Memcached extends AbstractAdapter
      * {@inheritdoc}
      *
      * @param string $id
-     * @return bool
+     * @return bool|mixed
      */
     protected function doDelete($id)
     {
@@ -141,7 +134,7 @@ class Memcached extends AbstractAdapter
     /**
      * {@inheritdoc}
      *
-     * @return bool
+     * @return bool|mixed
      */
     protected function doFlush()
     {

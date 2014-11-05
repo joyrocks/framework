@@ -21,9 +21,9 @@ use Bluz\Cache\InvalidArgumentException;
  * It's best to use for scalar data caching
  *
  * @package Bluz\Cache\Adapter
- * @link    http://php.net/manual/en/function.var-export.php
- * @link    http://php.net/manual/en/language.oop5.magic.php#object.set-state
- * @author  murzik
+ * @link http://php.net/manual/en/function.var-export.php
+ * @link http://php.net/manual/en/language.oop5.magic.php#object.set-state
+ * @author murzik
  */
 class PhpFile extends FileBase
 {
@@ -37,7 +37,7 @@ class PhpFile extends FileBase
      * {@inheritdoc}
      *
      * @param string $id
-     * @return bool
+     * @return bool|mixed
      */
     protected function doContains($id)
     {
@@ -81,8 +81,8 @@ class PhpFile extends FileBase
      * @param string $id
      * @param mixed $data
      * @param int $ttl
-     * @return integer The number of bytes that were written to the file, or false on failure.
-     * @throws InvalidArgumentException
+     * @return int|mixed
+     * @throws \Bluz\Cache\InvalidArgumentException
      */
     protected function doSet($id, $data, $ttl = Cache::TTL_NO_EXPIRY)
     {
@@ -90,7 +90,7 @@ class PhpFile extends FileBase
             $ttl = time() + $ttl;
         }
 
-        // if we have an array containing objects - we will have a problem.
+        //if we have an array containing objects - we will have a problem.
         if (is_object($data) && !method_exists($data, '__set_state')) {
             throw new InvalidArgumentException(
                 "Invalid argument given, PhpFileAdapter only allows objects that implement __set_state() " .
@@ -122,8 +122,8 @@ class PhpFile extends FileBase
      * @param string $id
      * @param mixed $data
      * @param int $ttl
-     * @return bool|int
-     * @throws InvalidArgumentException
+     * @return bool|int|mixed
+     * @throws \Bluz\Cache\InvalidArgumentException
      */
     protected function doAdd($id, $data, $ttl = Cache::TTL_NO_EXPIRY)
     {

@@ -32,7 +32,7 @@ interface CacheInterface
      * @param string $id cache entry identifier
      * @param mixed $data data to cache
      * @param int $ttl Time To Live in seconds 0 == infinity
-     * @return bool
+     * @return boolean
      */
     public function set($id, $data, $ttl = Cache::TTL_NO_EXPIRY);
 
@@ -42,14 +42,14 @@ interface CacheInterface
      * @param string $id cache entry identifier
      * @param mixed $data data to cache
      * @param int $ttl Time To Live in seconds 0 == infinity
-     * @return bool
+     * @return boolean
      */
     public function add($id, $data, $ttl = Cache::TTL_NO_EXPIRY);
 
     /**
      * Test for cache entry existence
      * @param string $id cache entry identifier
-     * @return bool
+     * @return boolean
      */
     public function contains($id);
 

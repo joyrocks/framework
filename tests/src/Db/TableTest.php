@@ -31,7 +31,17 @@ class TableTest extends Bluz\Tests\TestCase
      */
     protected function setUp()
     {
+        parent::setUp();
         $this->table = Bluz\Tests\Db\Fixtures\ConcreteTable::getInstance();
+    }
+
+    /**
+     * Tears down the fixture, for example, closes a network connection.
+     * This method is called after a test is executed.
+     */
+    protected function tearDown()
+    {
+        
     }
 
     /**
@@ -55,6 +65,7 @@ class TableTest extends Bluz\Tests\TestCase
     }
 
     /**
+     * @covers Bluz\Db\Table::getAdapter
      * @expectedException Bluz\Db\Exception\InvalidPrimaryKeyException
      */
     public function testGetPrimaryKeyException()
@@ -64,7 +75,7 @@ class TableTest extends Bluz\Tests\TestCase
     }
 
     /**
-     * Get Primary Key
+     * @covers Bluz\Db\Table::getAdapter
      */
     public function testGetPrimaryKey()
     {

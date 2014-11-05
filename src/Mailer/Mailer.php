@@ -11,9 +11,8 @@
  */
 namespace Bluz\Mailer;
 
-use Bluz\Common\Exception\ComponentException;
-use Bluz\Common\Exception\ConfigurationException;
 use Bluz\Common\Options;
+use Bluz\Config\ConfigException;
 
 /**
  * Wrapper over PHPMailer
@@ -32,13 +31,13 @@ class Mailer
     /**
      * checkOptions
      *
-     * @throws ConfigurationException
-     * @return bool
+     * @throws ConfigException
+     * @return boolean
      */
     protected function checkOptions()
     {
-        if (!$this->getOption('from', 'email')) {
-            throw new ConfigurationException(
+        if (!isset($this->options['from']['email'])) {
+            throw new ConfigException(
                 "Missed `from.email` option in `mailer` configuration. <br/>\n" .
                 "Read more: <a href='https://github.com/bluzphp/framework/wiki/Mailer'>".
                 "https://github.com/bluzphp/framework/wiki/Mailer</a>"
@@ -50,40 +49,30 @@ class Mailer
     /**
      * Creates new instance of PHPMailer and set default options from config
      *
-     * @throws ComponentException
-     * @throws \phpmailerException
+     * @throws MailerException
      * @return \PHPMailer
      */
     public function create()
     {
-        // can initial, can't use
-        if (!class_exists('\PHPMailer')) {
-            throw new ComponentException(
-                "PHPMailer library is required for `Bluz\\Mailer` package. <br/>\n" .
-                "Read more: <a href='https://github.com/bluzphp/framework/wiki/Mailer'>".
-                "https://github.com/bluzphp/framework/wiki/Mailer</a>"
-            );
-        }
-
         $mail = new \PHPMailer();
         $mail->WordWrap = 920; // RFC 2822 Compliant for Max 998 characters per line
 
-        $fromEmail = $this->getOption('from', 'email');
-        $fromName = $this->getOption('from', 'name') ?: '';
+        $fromEmail = $this->options['from']['email'];
+        $fromName = isset($this->options['from']['name']) ? $this->options['from']['name'] : '';
 
         // setup options from config
         $mail->SetFrom($fromEmail, $fromName, false);
 
         // setup options
-        if ($settings = $this->getOption('settings')) {
-            foreach ($settings as $name => $value) {
+        if (isset($this->options['settings'])) {
+            foreach ($this->options['settings'] as $name => $value) {
                 $mail->set($name, $value);
             }
         }
 
         // setup custom headers
-        if ($headers = $this->getOption('headers')) {
-            foreach ($headers as $header => $value) {
+        if (isset($this->options['headers'])) {
+            foreach ($this->options['headers'] as $header => $value) {
                 $mail->AddCustomHeader($header, $value);
             }
         }
@@ -102,8 +91,8 @@ class Mailer
      */
     public function send(\PHPMailer $mail)
     {
-        if ($template = $this->getOption('subjectTemplate')) {
-            $mail->Subject = sprintf($template, $mail->Subject);
+        if (isset($this->options['subjectTemplate'])) {
+            $mail->Subject = sprintf($this->options['subjectTemplate'], $mail->Subject);
         }
 
         if (!$mail->Send()) {

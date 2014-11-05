@@ -15,8 +15,9 @@ use Bluz\Application\Exception\ForbiddenException;
 
 return
     /**
-     * Denied helper can be declared inside Bootstrap
-     * @return bool
+     * get current user
+     *
+     * @return boolean
      */
     function () {
         throw new ForbiddenException();

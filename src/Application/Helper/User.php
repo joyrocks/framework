@@ -12,14 +12,16 @@
 namespace Bluz\Application\Helper;
 
 use Bluz\Application\Application;
-use Bluz\Proxy\Auth;
 
 return
     /**
-     * Get current user
-     * @var Application $this
+     * get current user
+     *
      * @return \Bluz\Auth\AbstractRowEntity|null
      */
     function () {
-        return Auth::getIdentity();
+        /** @var Application $this */
+        return $this->getAuth() ?
+            $this->getAuth()->getIdentity() :
+            null;
     };

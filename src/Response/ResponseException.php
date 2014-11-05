@@ -11,7 +11,7 @@
  */
 namespace Bluz\Response;
 
-use Bluz\Common\Exception\CommonException;
+use Bluz\Common\Exception;
 
 /**
  * ResponseException
@@ -21,6 +21,6 @@ use Bluz\Common\Exception\CommonException;
  * @author   Anton Shevchuk
  * @created  28.02.14 10:50
  */
-class ResponseException extends CommonException
+class ResponseException extends Exception
 {
 }

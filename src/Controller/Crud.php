@@ -14,12 +14,11 @@ namespace Bluz\Controller;
 use Bluz\Application\Exception\BadRequestException;
 use Bluz\Application\Exception\NotFoundException;
 use Bluz\Application\Exception\NotImplementedException;
-use Bluz\Proxy\Messages;
-use Bluz\Proxy\Request;
-use Bluz\Validator\Exception\ValidatorException;
+use Bluz\Crud\ValidationException;
+use Bluz\Http\Request;
 
 /**
- * Crud controller
+ * Crud
  *
  * @package  Bluz\Controller
  *
@@ -53,59 +52,65 @@ class Crud extends AbstractController
                     // create form
                     $result['method'] = Request::METHOD_POST;
                 }
+                return $result;
                 break;
             case Request::METHOD_POST:
                 try {
                     $result = $this->createOne($this->data);
-                    if (!Request::isXmlHttpRequest()) {
+                    if (!app()->getRequest()->isXmlHttpRequest()) {
                         $row = $this->readOne($result);
                         $result = [
                             'row'    => $row,
                             'method' => Request::METHOD_PUT
                         ];
+                        return $result;
                     }
-                } catch (ValidatorException $e) {
+                } catch (ValidationException $e) {
                     $row = $this->readOne(null);
                     $row->setFromArray($this->data);
                     $result = [
                         'row'    => $row,
-                        'errors' => $e->getErrors(),
+                        'errors' => $this->getCrud()->getErrors(),
                         'method' => $this->getMethod()
                     ];
+                    return $result;
                 }
                 break;
             case Request::METHOD_PATCH:
             case Request::METHOD_PUT:
                 try {
-                    $result = $this->updateOne($primary, $this->data);
-                    if (!Request::isXmlHttpRequest()) {
+                    $this->updateOne($primary, $this->data);
+                    if (!app()->getRequest()->isXmlHttpRequest()) {
                         $row = $this->readOne($primary);
                         $result = [
                             'row'    => $row,
                             'method' => $this->getMethod()
                         ];
+                        return $result;
                     }
-                } catch (ValidatorException $e) {
+                } catch (ValidationException $e) {
                     $row = $this->readOne($primary);
                     $row->setFromArray($this->data);
                     $result = [
                         'row'    => $row,
-                        'errors' => $e->getErrors(),
+                        'errors' => $this->getCrud()->getErrors(),
                         'method' => $this->getMethod()
                     ];
+                    return $result;
                 }
                 break;
             case Request::METHOD_DELETE:
-                $result = $this->deleteOne($primary);
+                $this->deleteOne($primary);
                 break;
             default:
                 throw new NotImplementedException();
+                break;
         }
-        return $result;
     }
 
     /**
      * Return primary key
+     *
      * @return array
      */
     public function getPrimaryKey()
@@ -127,9 +132,9 @@ class Crud extends AbstractController
      */
     public function createOne($data)
     {
-        $result = parent::createOne($data);
+        $result = $this->getCrud()->createOne($data);
 
-        Messages::addSuccess("Record was created");
+        app()->getMessages()->addSuccess("Record was created");
 
         return $result;
     }
@@ -145,9 +150,9 @@ class Crud extends AbstractController
      */
     public function updateOne($id, $data)
     {
-        $result = parent::updateOne($id, $data);
+        $result = $this->getCrud()->updateOne($id, $data);
 
-        Messages::addSuccess("Record was updated");
+        app()->getMessages()->addSuccess("Record was updated");
 
         return $result;
     }
@@ -162,9 +167,9 @@ class Crud extends AbstractController
      */
     public function deleteOne($primary)
     {
-        $result = parent::deleteOne($primary);
+        $result = $this->getCrud()->deleteOne($primary);
 
-        Messages::addSuccess("Record was deleted");
+        app()->getMessages()->addSuccess("Record was deleted");
 
         return $result;
     }

@@ -11,7 +11,7 @@
  */
 namespace Bluz\Router;
 
-use Bluz\Common\Exception\CommonException;
+use Bluz\Common\Exception;
 
 /**
  * Exception
@@ -21,6 +21,6 @@ use Bluz\Common\Exception\CommonException;
  * @author   Anton Shevchuk
  * @created  03.07.12 11:12
  */
-class RouterException extends CommonException
+class RouterException extends Exception
 {
 }

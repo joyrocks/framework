@@ -11,7 +11,7 @@
  */
 namespace Bluz\Db\Exception;
 
-use Bluz\Common\Exception\CommonException;
+use Bluz\Common\Exception;
 
 /**
  * Exception
@@ -20,6 +20,6 @@ use Bluz\Common\Exception\CommonException;
  * @author   Anton Shevchuk
  * @created  07.07.11 16:46
  */
-class DbException extends CommonException
+class DbException extends Exception
 {
 }

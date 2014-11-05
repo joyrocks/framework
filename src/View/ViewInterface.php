@@ -49,12 +49,12 @@ interface ViewInterface
      * @param array $data
      * @return ViewInterface
      */
-    public function setFromArray(array $data);
+    public function setData($data = array());
 
     /**
      * Get data as array
      *
      * @return array
      */
-    public function toArray();
+    public function getData();
 }

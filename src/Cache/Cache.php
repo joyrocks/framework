@@ -12,26 +12,21 @@
 namespace Bluz\Cache;
 
 use Bluz\Cache\Adapter;
-use Bluz\Common\Exception\ComponentException;
-use Bluz\Common\Exception\ConfigurationException;
 use Bluz\Common\Options;
+use Bluz\Config\ConfigException;
 
 /**
  * Cache Frontend for Bluz\Cache system
  *
  * Configuration
- *     'enabled' => true,           // Boolean,optional, true by default
- *     'cacheAdapter' => 'redis',   // Required if option 'enabled' set to true
- *     'tagAdapter' => 'memcached', // Optional
- *     'settings' => [
- *         'redis' => [],           // Settings for setup Instance of Bluz\Cache\CacheInterface.
- *         'memcached' => [],       // Settings for another cache adapter
- *     ]
+ *     'enabled' => Boolean,optional, true by default
+ *     'settings' =>
+ *         'cacheAdapter' => Settings for setup Instance of Bluz\Cache\CacheInterface.
+ *                    Required if option 'enabled' set to true
+ *         'tagAdapter' => Settings fir setup Instance of Bluz\Cache\CacheInterface. Optional.
+ *                    If it is not set, 'cacheAdapter' instance will be used as a tag adapter
  *
  * @package Bluz\Cache
- *
- * @link https://github.com/bluzphp/framework/wiki/Cache
- *
  * @author murzik
  */
 class Cache implements CacheInterface, TagableInterface
@@ -44,36 +39,35 @@ class Cache implements CacheInterface, TagableInterface
     const TTL_NO_EXPIRY = 0;
 
     /**
-     * @var CacheInterface Instance of cache adapter
+     * Instance of cache adapter
+     * @var Adapter\AbstractAdapter
      */
-    protected $adapter = null;
+    protected $cacheAdapter = null;
 
     /**
-     * @var string Prefix for cache keys
-     */
-    protected $prefix = 'bluz:';
-
-    /**
-     * @var CacheInterface Instance of tag adapter
+     * Instance of tag adapter
+     * @var Adapter\AbstractAdapter
      */
     protected $tagAdapter = null;
 
     /**
-     * @var string Prefix for tags
+     * Prefix for tags
+     * @var string
      */
-    protected $tagPrefix = 'bluz:@:';
+    protected $tagPrefix = '@:';
 
     /**
      * Check Cache configuration
-     * @throws ConfigurationException
-     * @return bool
+     *
+     * @throws \Bluz\Config\ConfigException
+     * @return boolean
      */
     protected function checkOptions()
     {
         // check cache Adapter instance and settings for initialize it
-        if (!$this->getOption('adapter')) {
-            throw new ConfigurationException(
-                "Missed `adapter` option in cache `settings` configuration. <br/>\n" .
+        if (!isset($this->options['settings'], $this->options['settings']['cacheAdapter'])) {
+            throw new ConfigException(
+                "Missed `cacheAdapter` option in cache `settings` configuration. <br/>\n" .
                 "Read more: <a href='https://github.com/bluzphp/framework/wiki/Cache'>".
                 "https://github.com/bluzphp/framework/wiki/Cache</a>"
             );
@@ -82,34 +76,32 @@ class Cache implements CacheInterface, TagableInterface
     }
 
     /**
-     * Prepare Id with prefix
-     * @param  string $id
-     * @throws InvalidArgumentException
-     * @return string
+     * Setup cache adapter
+     * @param CacheInterface $adapter
      */
-    protected function prepareId($id)
+    public function setCacheAdapter(CacheInterface $adapter)
     {
-        return $this->prefix . $id;
+        $this->cacheAdapter = $adapter;
     }
 
     /**
-     * Setup prefix for cache records
-     * @param string $prefix
-     * @return void
+     * Setup tag adapter
+     * @param CacheInterface $adapter
      */
-    public function setPrefix($prefix)
+    public function setTagAdapter(CacheInterface $adapter)
     {
-        $this->prefix = $prefix;
+        $this->tagAdapter = $adapter;
     }
 
     /**
-     * Setup prefix for cache records of tags
-     * @param string $prefix
-     * @return void
+     * {@inheritdoc}
+     *
+     * @param string $id
+     * @return mixed
      */
-    public function setTagPrefix($prefix)
+    public function get($id)
     {
-        $this->tagPrefix = $prefix;
+        return $this->getAdapter()->get($id);
     }
 
     /**
@@ -122,7 +114,6 @@ class Cache implements CacheInterface, TagableInterface
      */
     public function add($id, $data, $ttl = Cache::TTL_NO_EXPIRY)
     {
-        $id = $this->prepareId($id);
         return $this->getAdapter()->add($id, $data, $ttl);
     }
 
@@ -136,20 +127,7 @@ class Cache implements CacheInterface, TagableInterface
      */
     public function set($id, $data, $ttl = Cache::TTL_NO_EXPIRY)
     {
-        $id = $this->prepareId($id);
         return $this->getAdapter()->set($id, $data, $ttl);
-    }
-
-    /**
-     * {@inheritdoc}
-     *
-     * @param string $id
-     * @return mixed
-     */
-    public function get($id)
-    {
-        $id = $this->prepareId($id);
-        return $this->getAdapter()->get($id);
     }
 
     /**
@@ -160,7 +138,6 @@ class Cache implements CacheInterface, TagableInterface
      */
     public function contains($id)
     {
-        $id = $this->prepareId($id);
         return $this->getAdapter()->contains($id);
     }
 
@@ -172,19 +149,17 @@ class Cache implements CacheInterface, TagableInterface
      */
     public function delete($id)
     {
-        $id = $this->prepareId($id);
         return $this->getAdapter()->delete($id);
     }
 
     /**
      * {@inheritdoc}
      *
-     * @return void
+     * @return mixed
      */
     public function flush()
     {
-        $this->getAdapter()->flush();
-        $this->getTagAdapter()->flush();
+        return $this->getAdapter()->flush();
     }
 
     /**
@@ -193,53 +168,54 @@ class Cache implements CacheInterface, TagableInterface
      */
     public function getAdapter()
     {
-        if (!$this->adapter) {
-            $this->adapter = $this->initAdapter($this->getOption('adapter'));
+        if (!$this->cacheAdapter) {
+            $this->cacheAdapter = $this->initAdapter($this->options['settings']['cacheAdapter']);
         }
 
-        return $this->adapter;
+        return $this->cacheAdapter;
     }
 
     /**
      * Get underlying tag adapter
-     * @throws ConfigurationException
+     * @throws CacheException
      * @return Adapter\AbstractAdapter
      */
     public function getTagAdapter()
     {
         if (!$this->tagAdapter) {
             // create instance of new adapter
-            if ($tagAdapter = $this->getOption('tagAdapter')) {
-                $this->tagAdapter = $this->initAdapter($tagAdapter);
+            if (isset($this->options['settings']['tagAdapter'])) {
+                $this->tagAdapter = $this->initAdapter($this->options['settings']['tagAdapter']);
             } elseif ($adapter = $this->getAdapter()) {
                 $this->tagAdapter = $adapter;
             } else {
-                throw new ConfigurationException("Tag Adapter can't initialize. Configuration is missed");
+                throw new CacheException("Tag Adapter can't initialize. Configuration is missed");
             }
         }
         return $this->tagAdapter;
     }
 
     /**
-     * Initialize adapter
-     * @internal
-     * @param string $adapterName
-     * @throws ComponentException
-     * @throws ConfigurationException
+     * Init adapter
+     *
+     * @param mixed $settings
+     * @throws CacheException
      * @return Adapter\AbstractAdapter
      */
-    protected function initAdapter($adapterName)
+    protected function initAdapter($settings)
     {
-        if (!$adapterSettings = $this->getOption('settings', $adapterName)) {
-            throw new ConfigurationException("Cache Adapter can't initialize. Configuration is missed");
+        if (is_string($settings)) {
+            $adapterName = $settings;
+            $adapterSettings = [];
+        } elseif (isset($settings['name'], $settings['settings'])) {
+            $adapterName = $settings['name'];
+            $adapterSettings = $settings['settings'];
+        } else {
+            throw new CacheException("Cache Adapter can't initialize. Configuration is missed");
         }
 
         $adapterName = ucfirst($adapterName);
         $adapterClass = '\\Bluz\\Cache\\Adapter\\' . $adapterName;
-
-        if (!class_exists($adapterClass)) {
-            throw new ComponentException("Class for cache adapter `$adapterName` not found");
-        }
 
         $adapter = new $adapterClass($adapterSettings);
         return $adapter;
@@ -255,16 +231,15 @@ class Cache implements CacheInterface, TagableInterface
      */
     public function addTag($id, $tag)
     {
+        $identifiers = array();
         $tag = $this->tagPrefix . $tag;
 
         if ($this->getTagAdapter()->contains($tag)) {
             $identifiers = $this->getTagAdapter()->get($tag);
-        } else {
-            $identifiers = array();
         }
 
         // array may contain not unique values, but I can't see problem here
-        $identifiers[] = $this->prepareId($id);
+        $identifiers[] = $id;
 
         return $this->getTagAdapter()->set($tag, $identifiers);
     }

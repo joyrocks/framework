@@ -11,7 +11,7 @@
  */
 namespace Bluz\View;
 
-use Bluz\Common\Exception\CommonException;
+use Bluz\Common\Exception;
 
 /**
  * Exception
@@ -21,6 +21,6 @@ use Bluz\Common\Exception\CommonException;
  * @author   Anton Shevchuk
  * @created  06.03.12 16:01
  */
-class ViewException extends CommonException
+class ViewException extends Exception
 {
 }

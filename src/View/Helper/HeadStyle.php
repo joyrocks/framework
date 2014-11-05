@@ -11,22 +11,38 @@
  */
 namespace Bluz\View\Helper;
 
-use Bluz\Application\Application;
-use Bluz\Proxy\Layout;
+use Bluz\View\View;
 
 return
     /**
-     * Set or generate <style> code for <head>
-     *
-     * @var Layout $this
      * @param string $script
-     * @return string|null
+     * @return string|void
      */
     function ($style = null, $media = 'all') {
-        if (Application::getInstance()->hasLayout()) {
-            return Layout::headStyle($style, $media);
+    /** @var View $this */
+    if (app()->hasLayout()) {
+        // it's stack for <head>
+        $view = app()->getLayout();
+
+        $headStyle = $view->system('headStyle') ? : [];
+
+        if (null === $style) {
+            // clear system vars
+            $view->system('headStyle', []);
+
+            array_walk(
+                $headStyle,
+                function (&$item, $key) {
+                    $item = $this->style($key, $item);
+                }
+            );
+            return join("\n", $headStyle);
         } else {
-            // it's just alias to style() call
-            return $this->style($style);
+            $headStyle[$style] = $media;
+            $view->system('headStyle', $headStyle);
         }
+    } else {
+        // it's just alias to script() call
+        return $this->style($style);
+    }
     };

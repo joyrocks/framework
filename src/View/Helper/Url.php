@@ -12,42 +12,43 @@
 namespace Bluz\View\Helper;
 
 use Bluz\Application\Application;
-use Bluz\Proxy\Request;
-use Bluz\Proxy\Router;
 use Bluz\View\View;
 use Bluz\View\ViewException;
 
 return
     /**
-     * Generate URL
-     *
-     * @var View $this
      * @param string $module
      * @param string $controller
      * @param array $params
      * @param bool $checkAccess
      * @return string|null
      */
-    function ($module, $controller, $params = [], $checkAccess = false) {
-        try {
-            if ($checkAccess) {
-                if (!Application::getInstance()->isAllowed($module, $controller)) {
-                    return null;
-                }
+    function ($module, $controller, array $params = [], $checkAccess = false) {
+    /** @var View $this */
+    $app = app();
+
+    try {
+        if ($checkAccess) {
+            $controllerFile = $app->getControllerFile($module, $controller);
+            $reflectionData = $app->reflection($controllerFile);
+            if (!$app->isAllowed($module, $reflectionData)) {
+                return null;
             }
-        } catch (\Exception $e) {
-            throw new ViewException('Url View Helper: ' . $e->getMessage());
         }
+    } catch (\Exception $e) {
+        throw new ViewException('Url View Helper: ' . $e->getMessage());
+    }
 
-        if (null === $module) {
-            $module = Request::getModule();
-        }
-        if (null === $controller) {
-            $controller = Request::getController();
-        }
-        if (null === $params) {
-            $params = Request::getParams();
-        }
+    if (null === $module) {
+        $module = $app->getRequest()->getModule();
+    }
+    if (null === $controller) {
+        $controller = $app->getRequest()->getController();
+    }
+    if (null === $params) {
+        $params = $app->getRequest()->getParams();
+    }
 
-        return Router::getUrl($module, $controller, $params);
+    return $app->getRouter()
+        ->url($module, $controller, $params);
     };

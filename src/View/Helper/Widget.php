@@ -11,30 +11,41 @@
  */
 namespace Bluz\View\Helper;
 
-use Bluz\Application\Application;
-use Bluz\Application\Exception\ForbiddenException;
+use Bluz\Acl\AclException;
 use Bluz\View\View;
 
 return
     /**
-     * Widget call
+     * widget
      *
-     * Example of usage:
-     *     $this->widget($module, $controller, array $params);
+     * <pre>
+     * <code>
+     * $this->widget($module, $controller, array $params);
+     * </code>
+     * </pre>
      *
-     * @var View $this
      * @param string $module
      * @param string $widget
      * @param array $params
-     * @return void
+     * @return View
      */
     function ($module, $widget, $params = array()) {
-        try {
-            $widgetClosure = Application::getInstance()->widget($module, $widget);
-            call_user_func_array($widgetClosure, $params);
-        } catch (ForbiddenException $e) {
-            // nothing for Acl exception
-        } catch (\Exception $e) {
-            echo $this->exception($e);
+    /** @var View $this */
+    $application = app();
+    try {
+        $widgetClosure = $application->widget($module, $widget);
+        call_user_func_array($widgetClosure, $params);
+    } catch (AclException $e) {
+        // nothing for Acl exception
+        return null;
+    } catch (\Exception $e) {
+        if (app()->isDebug()) {
+            // exception message for developers
+            echo
+                '<div class="alert alert-error">' .
+                '<strong>Widget "' . $module . '/' . $widget . '"</strong>: ' .
+                $e->getMessage() .
+                '</div>';
         }
+    }
     };

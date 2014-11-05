@@ -11,7 +11,7 @@
  */
 namespace Bluz\Cache\Adapter;
 
-use Bluz\Common\Exception\ConfigurationException;
+use Bluz\Cache\InvalidArgumentException;
 
 /**
  * Base class for all filesystem-based cache adapters
@@ -19,7 +19,7 @@ use Bluz\Common\Exception\ConfigurationException;
  * @todo http://habrahabr.ru/post/148527/#comment_5014715
  *
  * @package Bluz\Cache\Adapter
- * @author  murzik
+ * @author murzik
  */
 abstract class FileBase extends AbstractAdapter
 {
@@ -39,21 +39,21 @@ abstract class FileBase extends AbstractAdapter
      * Check configuration and permissions
      *
      * @param array $settings
-     * @throws ConfigurationException
+     * @throws \Bluz\Cache\InvalidArgumentException
      */
     public function __construct($settings = array())
     {
         if (!isset($settings['cacheDir'])) {
-            throw new ConfigurationException("FileBase adapters is required 'cacheDir' option");
+            throw new InvalidArgumentException("FileBase adapters is required 'cacheDir' option");
         }
         $cacheDir = $settings['cacheDir'];
 
         if (!is_dir($cacheDir)) {
-            throw new ConfigurationException("'$cacheDir' is not directory");
+            throw new InvalidArgumentException("'$cacheDir' is not directory");
         }
 
         if (!is_writable($cacheDir)) {
-            throw new ConfigurationException("Directory '$cacheDir' is not writable");
+            throw new InvalidArgumentException("Directory '$cacheDir' is not writable");
         }
         // get rid of trailing slash
         $this->cacheDir = realpath($cacheDir);
@@ -89,12 +89,11 @@ abstract class FileBase extends AbstractAdapter
      */
     protected function getFilename($id)
     {
-        // make uid as hash from id
-        // split it by 4 chars for make directory structure
-        $path = join(DIRECTORY_SEPARATOR, str_split(md5($id), 4));
+        // Copypasted from Doctrine\Common\Cache\FileCache
+        $path = implode(str_split(md5($id), 12), DIRECTORY_SEPARATOR);
         $path = $this->cacheDir . DIRECTORY_SEPARATOR . $path;
 
-        return $path . $this->extension;
+        return $path . DIRECTORY_SEPARATOR . $id . $this->extension;
     }
 
     /**

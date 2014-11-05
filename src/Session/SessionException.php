@@ -11,7 +11,7 @@
  */
 namespace Bluz\Session;
 
-use Bluz\Common\Exception\CommonException;
+use Bluz\Common\Exception;
 
 /**
  * Exception
@@ -21,6 +21,6 @@ use Bluz\Common\Exception\CommonException;
  * @author   Anton Shevchuk
  * @created  26.01.12 19:06
  */
-class SessionException extends CommonException
+class SessionException extends Exception
 {
 }

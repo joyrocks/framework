@@ -12,8 +12,7 @@
 namespace Bluz\Messages;
 
 use Bluz\Common\Options;
-use Bluz\Proxy\Session;
-use Bluz\Proxy\Translator;
+use Bluz\Translator\Translator;
 
 /**
  * Realization of Flash Messages
@@ -41,7 +40,25 @@ class Messages
     );
 
     /**
-     * Initialize Messages container
+     * get size of messages container
+     *
+     * @return integer
+     */
+    public function count()
+    {
+        $size = 0;
+        if (!$store = $this->getMessagesStore()) {
+            return $size;
+        }
+        foreach ($store as $messages) {
+            $size += sizeof($messages);
+        }
+        return $size;
+    }
+
+    /**
+     * init
+     *
      * @return Messages
      */
     protected function init()
@@ -53,51 +70,52 @@ class Messages
     }
 
     /**
-     * Add notice
+     * add notice
+     *
      * @param string $text
-     * @return void
+     * @return Messages
      */
     public function addNotice($text)
     {
-        $this->add(self::TYPE_NOTICE, $text);
+        $this->init();
+
+        $this->getMessagesStore()[self::TYPE_NOTICE][] = Translator::translate($text);
+        return $this;
     }
 
     /**
-     * Add success
+     * add success
+     *
      * @param string $text
-     * @return void
+     * @return Messages
      */
     public function addSuccess($text)
     {
-        $this->add(self::TYPE_SUCCESS, $text);
+        $this->init();
+
+        $this->getMessagesStore()[self::TYPE_SUCCESS][] = Translator::translate($text);
+        return $this;
     }
 
     /**
-     * Add error
+     * add error
+     *
      * @param string $text
-     * @return void
+     * @return Messages
      */
     public function addError($text)
     {
-        $this->add(self::TYPE_ERROR, $text);
-    }
-
-    /**
-     * Add message to container
-     * @param string $type One of error, notice or success
-     * @param string $text
-     * @return void
-     */
-    protected function add($type, $text)
-    {
         $this->init();
-        $this->getMessagesStore()[$type][] = Translator::translate($text);
+
+        $this->getMessagesStore()[self::TYPE_ERROR][] = Translator::translate($text);
+        return $this;
     }
 
     /**
      * Pop a message
+     *
      * @param string $type
-     * @return \stdClass|null
+     * @return \stdClass
      */
     public function pop($type = null)
     {
@@ -125,6 +143,7 @@ class Messages
 
     /**
      * Pop all messages
+     *
      * @return \ArrayObject
      */
     public function popAll()
@@ -139,41 +158,26 @@ class Messages
     }
 
     /**
-     * Get size of messages container
-     * @return integer
-     */
-    public function count()
-    {
-        $size = 0;
-        if (!$store = $this->getMessagesStore()) {
-            return $size;
-        }
-        foreach ($store as $messages) {
-            $size += sizeof($messages);
-        }
-        return $size;
-    }
-
-    /**
      * Reset messages
-     * @return void
      */
     public function reset()
     {
-        Session::set('messages:store', $this->createEmptyMessagesStore());
+        app()->getSession()->MessagesStore = $this->createEmptyMessagesStore();
     }
 
     /**
-     * Returns current messages store
+     * Returns current messages store.
+     *
      * @return \ArrayObject|null Returns null if store not exists yet
      */
     protected function getMessagesStore()
     {
-        return Session::get('messages:store');
+        return app()->getSession()->MessagesStore;
     }
 
     /**
-     * Creates a new empty store for messages
+     * Creates a new empty store for messages.
+     *
      * @return \ArrayObject
      */
     protected function createEmptyMessagesStore()

@@ -11,7 +11,6 @@
  */
 namespace Bluz\View\Helper;
 
-use Bluz\Proxy\Request;
 use Bluz\View\View;
 
 return
@@ -19,14 +18,15 @@ return
      * Return controller name
      * or check to current controller
      *
-     * @var View $this
      * @param string $controller
-     * @return string|bool
+     * @return string|boolean
      */
     function ($controller = null) {
-        if (null == $controller) {
-            return Request::getController();
-        } else {
-            return Request::getController() == $controller;
-        }
+    /** @var View $this */
+    $request = app()->getRequest();
+    if (null == $controller) {
+        return $request->getController();
+    } else {
+        return $request->getController() == $controller;
+    }
     };

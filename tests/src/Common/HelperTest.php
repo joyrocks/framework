@@ -14,7 +14,7 @@ use Bluz\Tests\Common\Fixtures\ConcreteHelpers;
 
 /**
  * Tests for Helper trait
- *
+ * @category Tests
  * @package  Bluz\Tests\Common
  *
  * @author   Anton Shevchuk
@@ -35,12 +35,22 @@ class HelperTest extends TestCase
      */
     protected function setUp()
     {
+        parent::setUp();
         $this->class = new ConcreteHelpers();
     }
 
     /**
+     * Tears down the fixture, for example, closes a network connection.
+     * This method is called after a test is executed.
+     */
+    protected function tearDown()
+    {
+
+    }
+
+    /**
      * Helper paths is not initialized, and helper file not found
-     * @expectedException \Bluz\Common\Exception\CommonException
+     * @expectedException \Bluz\Common\Exception
      */
     public function testInvalidHelperCall()
     {
@@ -49,7 +59,7 @@ class HelperTest extends TestCase
 
     /**
      * Helper path initialized, but file consists some stuff, it's not callable
-     * @expectedException \Bluz\Common\Exception\CommonException
+     * @expectedException \Bluz\Common\Exception
      */
     public function testInvalidHelperCall2()
     {

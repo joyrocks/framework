@@ -14,6 +14,8 @@ namespace Bluz\Cache;
 /**
  * Interface for Tagable classes
  *
+ * @todo public function getByTag?
+ *
  * @package Bluz\Cache
  * @author murzik
  */
@@ -23,14 +25,14 @@ interface TagableInterface
      * Add tag $tag for cache entry with $id identifier
      * @param string $id
      * @param string $tag
-     * @return bool
+     * @return boolean
      */
     public function addTag($id, $tag);
 
     /**
      * Delete all cache entries associated with given $tag
      * @param string $tag
-     * @return bool
+     * @return boolean
      */
     public function deleteByTag($tag);
 }

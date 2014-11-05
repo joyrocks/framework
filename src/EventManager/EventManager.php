@@ -25,10 +25,10 @@ class EventManager
     protected $listeners = array();
 
     /**
-     * Attach callback to event
+     * attach
      *
      * @param string $eventName
-     * @param callable $callback
+     * @param \closure $callback
      * @param int $priority
      * @return EventManager
      */
@@ -45,12 +45,12 @@ class EventManager
     }
 
     /**
-     * Trigger event
+     * trigger
      *
-     * @param string $event
-     * @param string|object $target
-     * @param array|object $params
-     * @return string|object
+     * @param      $event
+     * @param null $target
+     * @param null $params
+     * @return EventManager
      */
     public function trigger($event, $target = null, $params = null)
     {
@@ -74,9 +74,9 @@ class EventManager
     }
 
     /**
-     * Fire!
+     * fire
      *
-     * @param array $listeners
+     * @param $listeners
      * @param Event $event
      * @return EventManager
      */

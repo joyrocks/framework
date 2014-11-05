@@ -12,7 +12,7 @@
 namespace Bluz\Application\Exception;
 
 /**
- * NotFound Exception
+ * Exception
  *
  * @package  Bluz\Application\Exception
  *

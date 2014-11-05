@@ -12,7 +12,7 @@
 namespace Bluz\Application\Exception;
 
 /**
- * Reload Exception
+ * Exception
  *
  * @package  Bluz\Application\Exception
  *
@@ -26,10 +26,4 @@ class ReloadException extends ApplicationException
      * @var string
      */
     protected $message = "Application Reload";
-
-    /**
-     * HTTP OK
-     * @var int
-     */
-    protected $code = 200;
 }

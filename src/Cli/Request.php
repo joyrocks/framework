@@ -24,43 +24,42 @@ use Bluz\Request\RequestException;
  */
 class Request extends AbstractRequest
 {
+
     /**
      * Constructor
      *
-     * @example $> php bin/cli.php --uri "/index/index/?foo=bar"
+     * @example $> php index.php --uri "/index/index/?foo=bar"
      */
     public function __construct()
     {
         $this->method = self::METHOD_CLI;
 
-        $arguments = getopt("u:", ["uri:"]);
+        $args = $_SERVER["argv"];
 
-        if (!array_key_exists('u', $arguments) && !array_key_exists('uri', $arguments)) {
-            throw new RequestException('Attribute `--uri` is required');
+        // unset script name
+        unset($args[0]);
+
+        if (!in_array('--uri', $args)) {
+            throw new RequestException('Attribute "--uri" is required');
         }
 
-        $uri = isset($arguments['u']) ? $arguments['u'] : $arguments['uri'];
+        $uriOrder = array_search('--uri', $args) + 1;
 
-        $path = parse_url($uri, PHP_URL_PATH);
-        $query = parse_url($uri, PHP_URL_QUERY);
-
-        // two syntax should be has equal result
-        //     /module/controller?foo=bar
-        //     /module/controller/?foo=bar
-        $uri = rtrim($path, '/') .'/'. ($query ? '?'.$query : '');
-
-        $this->setRequestUri($uri);
-
-        if ($query) {
-            parse_str($query, $params);
-            if (is_array($params)) {
+        if (isset($args[$uriOrder])) {
+            $uri = $args[$uriOrder];
+            $this->setRequestUri($uri);
+            if ($query = parse_url($uri, PHP_URL_QUERY)) {
+                parse_str($query, $params);
                 $this->setParams($params);
             }
+        } else {
+            throw new RequestException('Attribute "--uri" is required');
         }
     }
 
     /**
-     * Get the request URI
+     * Get the request URI.
+     *
      * @return string
      */
     public function getRequestUri()
@@ -72,7 +71,8 @@ class Request extends AbstractRequest
     }
 
     /**
-     * Get the request URI
+     * Get the request URI.
+     *
      * @return string
      */
     public function getCleanUri()
@@ -81,22 +81,25 @@ class Request extends AbstractRequest
     }
 
     /**
-     * Get the base URL
+     * Get the base URL.
+     *
      * @return string
      */
     public function getBaseUrl()
     {
         if (null === $this->baseUrl) {
-            $this->setBaseUrl('/');
+            $this->setBaseUrl('');
         }
         return $this->baseUrl;
     }
 
     /**
      * Get the client's IP address
+     *
+     * @param  boolean $checkProxy
      * @return string
      */
-    public function getClientIp()
+    public function getClientIp($checkProxy = true)
     {
         return '127.0.0.1';
     }

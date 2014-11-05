@@ -2,5 +2,3 @@
 .idea
 vendor/*
 composer.phar
-phpdoc.dist.xml
-phpunit.xml

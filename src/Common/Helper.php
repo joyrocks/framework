@@ -11,8 +11,6 @@
  */
 namespace Bluz\Common;
 
-use Bluz\Common\Exception\CommonException;
-
 /**
  * Helper trait
  *
@@ -31,18 +29,19 @@ trait Helper
     /**
      * @var array of helpers paths
      */
-    protected $helpersPath = array();
+    protected static $helpersPath = array();
 
     /**
      * Add helper path
+     *
      * @param string $path
      * @return self
      */
     public function addHelperPath($path)
     {
         $path = rtrim(realpath($path), '/');
-        if (false !== $path && !in_array($path, $this->helpersPath)) {
-            $this->helpersPath[] = $path;
+        if (false !== $path && !in_array($path, self::$helpersPath)) {
+            self::$helpersPath[] = $path;
         }
 
         return $this;
@@ -50,6 +49,7 @@ trait Helper
 
     /**
      * Set helpers path
+     *
      * @param string|array $helpersPath
      * @return self
      */
@@ -66,35 +66,33 @@ trait Helper
     }
 
     /**
-     * Call magic helper
+     * Call
+     *
      * @param string $method
      * @param array $args
-     * @throws CommonException
+     * @throws Exception
      * @return mixed
      */
     public function __call($method, $args)
     {
-        // Setup key
-        $key = get_called_class() .':'. $method;
-
         // Call helper function (or class)
-        if (isset($this->helpers[$key]) && is_callable($this->helpers[$key])) {
-            return call_user_func_array($this->helpers[$key], $args);
+        if (isset($this->helpers[$method]) && is_callable($this->helpers[$method])) {
+            return call_user_func_array($this->helpers[$method], $args);
         }
 
         // Try to find helper file
-        foreach ($this->helpersPath as $helperPath) {
+        foreach (self::$helpersPath as $helperPath) {
             $helperPath = realpath($helperPath . '/' . ucfirst($method) . '.php');
             if ($helperPath) {
                 $helperInclude = include $helperPath;
                 if (is_callable($helperInclude)) {
-                    $this->helpers[$key] = $helperInclude;
-                    return call_user_func_array($this->helpers[$key], $args);
+                    $this->helpers[$method] = $helperInclude;
                 } else {
-                    throw new CommonException("Helper '$method' not found in file '$helperPath'");
+                    throw new Exception("Helper '$method' not found in file '$helperPath'");
                 }
+                return $this->__call($method, $args);
             }
         }
-        throw new CommonException("Helper '$method' not found for '" . __CLASS__ . "'");
+        throw new Exception("Helper '$method' not found for '" . __CLASS__ . "'");
     }
 }

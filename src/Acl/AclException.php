@@ -11,16 +11,23 @@
  */
 namespace Bluz\Acl;
 
-use Bluz\Application\Exception\ForbiddenException;
+use Bluz\Common\Exception;
 
 /**
- * Acl Exception
+ * Exception
  *
  * @package  Bluz\Acl
  *
  * @author   Anton Shevchuk
  * @created  06.03.12 15:53
  */
-class AclException extends ForbiddenException
+class AclException extends Exception
 {
+    /**
+     * HTTP code
+     * 401 Unauthorized
+     * 403 Forbidden
+     * @var int
+     */
+    protected $code = 401;
 }

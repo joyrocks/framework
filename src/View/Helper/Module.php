@@ -11,7 +11,6 @@
  */
 namespace Bluz\View\Helper;
 
-use Bluz\Proxy\Request;
 use Bluz\View\View;
 
 return
@@ -19,14 +18,15 @@ return
      * Return module name
      * or check to current module
      *
-     * @var View $this
      * @param string $module
-     * @return string|bool
+     * @return string|boolean
      */
     function ($module = null) {
-        if (null == $module) {
-            return Request::getModule();
-        } else {
-            return Request::getModule() == $module;
-        }
+    /** @var View $this */
+    $request = app()->getRequest();
+    if (null == $module) {
+        return $request->getModule();
+    } else {
+        return $request->getModule() == $module;
+    }
     };

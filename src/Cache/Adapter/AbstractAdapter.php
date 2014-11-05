@@ -11,6 +11,7 @@
  */
 namespace Bluz\Cache\Adapter;
 
+use Bluz\Cache\InvalidArgumentException;
 use Bluz\Cache\Cache;
 use Bluz\Cache\CacheInterface;
 
@@ -18,7 +19,7 @@ use Bluz\Cache\CacheInterface;
  * Base class for all cache adapters within Bluz\Cache package
  *
  * @package Bluz\Cache\Adapter
- * @author  murzik
+ * @author murzik
  */
 abstract class AbstractAdapter implements CacheInterface
 {
@@ -30,7 +31,6 @@ abstract class AbstractAdapter implements CacheInterface
 
     /**
      * Setup adapter settings
-     *
      * @param array $settings setup adapter
      */
     public function __construct($settings = array())
@@ -47,6 +47,7 @@ abstract class AbstractAdapter implements CacheInterface
      */
     public function get($id)
     {
+        $id = $this->castToString($id);
         return $this->doGet($id);
     }
 
@@ -59,6 +60,7 @@ abstract class AbstractAdapter implements CacheInterface
      */
     public function contains($id)
     {
+        $id = $this->castToString($id);
         return $this->doContains($id);
     }
 
@@ -73,6 +75,7 @@ abstract class AbstractAdapter implements CacheInterface
      */
     public function add($id, $data, $ttl = Cache::TTL_NO_EXPIRY)
     {
+        $id = $this->castToString($id);
         return $this->doAdd($id, $data, $ttl);
     }
 
@@ -87,6 +90,7 @@ abstract class AbstractAdapter implements CacheInterface
      */
     public function set($id, $data, $ttl = Cache::TTL_NO_EXPIRY)
     {
+        $id = $this->castToString($id);
         return $this->doSet($id, $data, $ttl);
     }
 
@@ -99,6 +103,7 @@ abstract class AbstractAdapter implements CacheInterface
      */
     public function delete($id)
     {
+        $id = $this->castToString($id);
         return $this->doDelete($id);
     }
 
@@ -110,6 +115,26 @@ abstract class AbstractAdapter implements CacheInterface
     public function flush()
     {
         return $this->doFlush();
+    }
+
+    /**
+     * Cast given $inputValue to string.
+     * @param mixed $inputValue
+     * @throws InvalidArgumentException if given $input value not a number or string
+     * @return string $castedToString
+     * @internal defence from "fool".
+     *           Attempt to cast to string object will lead to cache entry with id "Object".
+     *           Which is wrong.
+     */
+    protected function castToString($inputValue)
+    {
+        if (!is_string($inputValue) && !is_int($inputValue)) {
+            $msg = "<String> or <Integer> expected. But "
+                . "<" . gettype($inputValue) . "> given.";
+            throw new InvalidArgumentException($msg);
+        }
+
+        return (string)$inputValue;
     }
 
     /**

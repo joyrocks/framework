@@ -12,7 +12,7 @@
 namespace Bluz\Application\Exception;
 
 /**
- * BadRequest Exception
+ * Exception
  *
  * @package  Bluz\Application\Exception
  *
@@ -28,7 +28,10 @@ class BadRequestException extends ApplicationException
     protected $message = "Bad Request";
 
     /**
-     * Bad Request HTTP Code
+     * Redirect HTTP code
+     *
+     *  - 301 Moved Permanently
+     *  - 302 Found
      * @var int
      */
     protected $code = 400;

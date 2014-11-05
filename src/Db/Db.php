@@ -11,21 +11,18 @@
  */
 namespace Bluz\Db;
 
-use Bluz\Common\Exception\ConfigurationException;
 use Bluz\Common\Options;
 use Bluz\Db\Query;
 use Bluz\Db\Exception\DbException;
-use Bluz\Proxy\Logger;
 
 /**
  * PDO wrapper
  *
  * @package  Bluz\Db
  *
- * @link     https://github.com/AntonShevchuk/Bluz/wiki/Db
- *
  * @author   Anton Shevchuk
  * @created  07.07.11 15:36
+ * @link     https://github.com/AntonShevchuk/Bluz/wiki/Db
  */
 class Db
 {
@@ -58,7 +55,43 @@ class Db
      * PDO instance
      * @var \PDO
      */
-    protected $handler;
+    protected $dbh;
+
+    /**
+     * Himself instance
+     * @var Db
+     */
+    protected static $adapter;
+
+    /**
+     * setDefaultAdapter
+     *
+     * @param bool $flag
+     * @return Db
+     */
+    public function setDefaultAdapter($flag = true)
+    {
+        if ($flag) {
+            self::$adapter = $this;
+        }
+        return $this;
+    }
+
+    /**
+     * getDefaultAdapter
+     *
+     * @throws DbException
+     * @return Db
+     */
+    public static function getDefaultAdapter()
+    {
+        // check default adapter
+        if (self::$adapter) {
+            return self::$adapter;
+        } else {
+            throw new DbException("Default database adapter is not configured");
+        }
+    }
 
     /**
      * Setup connection
@@ -80,28 +113,14 @@ class Db
     public function setConnect(array $connect)
     {
         $this->connect = array_merge($this->connect, $connect);
-        $this->checkConnect();
-        return $this;
-    }
-
-    /**
-     * Check connection options
-     *
-     * @throws ConfigurationException
-     * @return void
-     */
-    private function checkConnect()
-    {
         if (empty($this->connect['type']) or
             empty($this->connect['host']) or
             empty($this->connect['name']) or
             empty($this->connect['user'])
         ) {
-            throw new ConfigurationException(
-                "Database adapter is not configured.
-                Please check 'db' configuration section: required type, host, db name and user"
-            );
+            throw new DbException('Db connection can\'t be initialized: required type, host, db name and user');
         }
+        return $this;
     }
 
     /**
@@ -124,11 +143,17 @@ class Db
      */
     public function connect()
     {
-        if (empty($this->handler)) {
+        if (empty($this->dbh)) {
+            if (empty($this->connect['type']) or
+                empty($this->connect['host']) or
+                empty($this->connect['name']) or
+                empty($this->connect['user'])
+            ) {
+                throw new DbException('Db connection can\'t be initialized: required type, host, db name and user');
+            }
             try {
-                $this->checkConnect();
                 $this->log("Connect to " . $this->connect['host']);
-                $this->handler = new \PDO(
+                $this->dbh = new \PDO(
                     $this->connect['type'] . ":host=" . $this->connect['host'] . ";dbname=" . $this->connect['name'],
                     $this->connect['user'],
                     $this->connect['pass'],
@@ -136,10 +161,10 @@ class Db
                 );
 
                 foreach ($this->attributes as $attribute => $value) {
-                    $this->handler->setAttribute($attribute, $value);
+                    $this->dbh->setAttribute($attribute, $value);
                 }
 
-                $this->log("ok");
+                $this->log("Connected");
             } catch (\Exception $e) {
                 throw new DbException('Attempt connection to database is failed: '. $e->getMessage());
             }
@@ -154,10 +179,10 @@ class Db
      */
     public function handler()
     {
-        if (empty($this->handler)) {
+        if (empty($this->dbh)) {
             $this->connect();
         }
-        return $this->handler;
+        return $this->dbh;
     }
 
     /**
@@ -188,22 +213,14 @@ class Db
     /**
      * Quote a string so it can be safely used as a table or column name
      *
-     * @param string $identifier
+     * @param string $value
      * @return string
      */
-    public function quoteIdentifier($identifier)
+    public function quoteIdentifier($value)
     {
-        // switch statement for DB type
-        switch ($this->connect['type']) {
-            case 'mysql':
-                return '`' . str_replace('`', '``', $identifier) . '`';
-                break;
-            case 'postgresql':
-            case 'sqlite':
-            default:
-                return '"' . str_replace('"', '\\' . '"', $identifier) . '"';
-                break;
-        }
+        // remove "back ticks" from table/column name
+        $value = str_replace("`", "", $value);
+        return "`".$value."`";
     }
 
     /**
@@ -233,21 +250,18 @@ class Db
                 isset($types[$key])?$types[$key]:\PDO::PARAM_STR
             );
         }
-
         $this->log($sql, $params);
         $stmt->execute($params);
-
-        $this->log("ok");
         return $stmt->rowCount();
     }
 
     /**
      * Create new query select builder
      *
-     * @param string $select,... The selection expressions
+     * @param string $select The selection expressions
      * @return Query\Select
      */
-    public function select()
+    public function select($select)
     {
         $query = new Query\Select();
         $query->select(func_get_args());
@@ -310,12 +324,10 @@ class Db
     public function fetchOne($sql, $params = array())
     {
         $stmt = $this->prepare($sql);
-
-        $this->log($sql, $params);
         $stmt->execute($params);
         $result = $stmt->fetch(\PDO::FETCH_COLUMN);
 
-        $this->log("ok");
+        $this->log($sql, $params);
         return $result;
     }
 
@@ -340,12 +352,10 @@ class Db
     public function fetchRow($sql, $params = array())
     {
         $stmt = $this->prepare($sql);
-
-        $this->log($sql, $params);
         $stmt->execute($params);
         $result = $stmt->fetch(\PDO::FETCH_ASSOC);
 
-        $this->log("ok");
+        $this->log($sql, $params);
         return $result;
     }
 
@@ -361,17 +371,15 @@ class Db
      * @param array $params <p>
      *  array (':ip' => '127.0.0.1')
      * </p>
-     * @return array[]
+     * @return array
      */
     public function fetchAll($sql, $params = array())
     {
         $stmt = $this->prepare($sql);
-
-        $this->log($sql, $params);
         $stmt->execute($params);
         $result = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
-        $this->log("ok");
+        $this->log($sql, $params);
         return $result;
     }
 
@@ -389,12 +397,10 @@ class Db
     public function fetchColumn($sql, $params = array())
     {
         $stmt = $this->prepare($sql);
-
-        $this->log($sql, $params);
         $stmt->execute($params);
         $result = $stmt->fetchAll(\PDO::FETCH_COLUMN);
 
-        $this->log("ok");
+        $this->log($sql, $params);
         return $result;
     }
 
@@ -402,7 +408,7 @@ class Db
      * Returns an array containing all of the result set rows
      *
      * Group by first column
-     *     $db->fetchGroup("SELECT ip, COUNT(id) FROM users GROUP BY ip", array());
+     *     $db->fetchPairs("SELECT ip, COUNT(id) FROM users GROUP BY ip", array());
      *
      * @param string $sql <p>
      *  "SELECT ip, id FROM users"
@@ -413,12 +419,10 @@ class Db
     public function fetchGroup($sql, $params = array())
     {
         $stmt = $this->prepare($sql);
-
-        $this->log($sql, $params);
         $stmt->execute($params);
         $result = $stmt->fetchAll(\PDO::FETCH_ASSOC | \PDO::FETCH_GROUP);
 
-        $this->log("ok");
+        $this->log($sql, $params);
         return $result;
     }
 
@@ -436,12 +440,10 @@ class Db
     public function fetchColumnGroup($sql, $params = array())
     {
         $stmt = $this->prepare($sql);
-
-        $this->log($sql, $params);
         $stmt->execute($params);
         $result = $stmt->fetchAll(\PDO::FETCH_COLUMN | \PDO::FETCH_GROUP);
 
-        $this->log("ok");
+        $this->log($sql, $params);
         return $result;
     }
 
@@ -459,12 +461,10 @@ class Db
     public function fetchPairs($sql, $params = array())
     {
         $stmt = $this->prepare($sql);
-
-        $this->log($sql, $params);
         $stmt->execute($params);
         $result = $stmt->fetchAll(\PDO::FETCH_KEY_PAIR);
 
-        $this->log("ok");
+        $this->log($sql, $params);
         return $result;
     }
 
@@ -490,21 +490,19 @@ class Db
     public function fetchObject($sql, $params = array(), $object = "stdClass")
     {
         $stmt = $this->prepare($sql);
-
-        $this->log($sql, $params);
+        $result = null;
         $stmt->execute($params);
-
-        if (is_string($object)) {
-            // some class name
-            $result = $stmt->fetchObject($object);
-        } else {
+        if (is_object($object)) {
             // some instance
             $stmt->setFetchMode(\PDO::FETCH_INTO, $object);
             $result = $stmt->fetch(\PDO::FETCH_INTO);
+        } else {
+            // some class name
+            $result = $stmt->fetchObject($object);
         }
 
         $stmt->closeCursor();
-        $this->log("ok");
+        $this->log($sql, $params);
         return $result;
     }
 
@@ -523,51 +521,20 @@ class Db
     public function fetchObjects($sql, $params = array(), $object = null)
     {
         $stmt = $this->prepare($sql);
-
-        $this->log($sql, $params);
+        $result = null;
         $stmt->execute($params);
-
-        if (is_string($object)) {
-            // some class name
-            $result = $stmt->fetchAll(\PDO::FETCH_CLASS, $object);
-        } else {
+        if (!$object) {
             // StdClass
             $result = $stmt->fetchAll(\PDO::FETCH_OBJ);
+        } elseif (is_object($object)) {
+            // some instance
+            $result = $stmt->fetchAll(\PDO::FETCH_INTO, $object);
+        } elseif (is_string($object)) {
+            // some class name
+            $result = $stmt->fetchAll(\PDO::FETCH_CLASS, $object);
         }
-
         $stmt->closeCursor();
-        $this->log("ok");
-        return $result;
-    }
-
-    /**
-     * Returns an array of linked objects containing the result set
-     *
-     * @param string $sql <p>
-     *  "SELECT '__users', u.*, '__users_profile', up.*
-     *   FROM users u
-     *   LEFT JOIN users_profile up ON up.userId = u.id"
-     *   WHERE u.name = :name
-     *  </p>
-     * @param array $params <p>
-     *  array (':name' => 'John')
-     * </p>
-     * @return array
-     */
-    public function fetchRelations($sql, $params = array())
-    {
-        $stmt = $this->prepare($sql);
-
         $this->log($sql, $params);
-        $stmt->execute($params);
-
-        $result = $stmt->fetchAll(\PDO::FETCH_ASSOC);
-
-        // prepare results
-        $result = Relations::fetch($result);
-
-        $stmt->closeCursor();
-        $this->log("ok");
         return $result;
     }
 
@@ -581,9 +548,9 @@ class Db
      *         $db->query("DELETE FROM `table` ...");
      *     })
      *
-     * @param  callable $process
+     * @param \Closure $process
      * @throws DbException
-     * @return bool
+     * @return boolean
      */
     public function transaction($process)
     {
@@ -592,7 +559,7 @@ class Db
         }
         try {
             $this->handler()->beginTransaction();
-            call_user_func($process);
+            $process();
             $this->handler()->commit();
             return true;
         } catch (\PDOException $e) {
@@ -616,7 +583,7 @@ class Db
         // replace mask by data
         $sql = vsprintf($sql, $context);
 
-        Logger::info("db: " . $sql);
+        app()->log("DB >> " . $sql);
     }
 
     /**
@@ -626,8 +593,9 @@ class Db
      */
     public function disconnect()
     {
-        if ($this->handler) {
-            $this->handler = null;
+        if ($this->dbh) {
+            $this->dbh = null;
         }
+        self::$adapter = null;
     }
 }

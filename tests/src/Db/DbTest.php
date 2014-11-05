@@ -11,7 +11,6 @@ namespace Bluz\Tests\Db;
 
 use Bluz;
 use Bluz\Db;
-use Bluz\Proxy;
 use Bluz\Tests;
 use Bluz\Tests\Db\Fixtures;
 
@@ -22,220 +21,35 @@ use Bluz\Tests\Db\Fixtures;
 class DbTest extends Bluz\Tests\TestCase
 {
     /**
-     * @var Db\Db
-     */
-    protected $db;
-
-    /**
-     * setUp
-     */
-    public function setUp()
-    {
-        $this->db = new Db\Db();
-        $this->db->setOptions(Proxy\Config::getData('db'));
-    }
-
-    /**
-     * tearDown
-     */
-    public function tearDown()
-    {
-        $this->db->disconnect();
-    }
-
-    /**
-     * Initial Db with configuration
-     */
-    public function testCheckConnect()
-    {
-        $this->db->connect();
-        $this->assertInstanceOf('\Pdo', $this->db->handler());
-    }
-
-    /**
-     * Initial Db with empty configuration
-     * @expectedException \Bluz\Common\Exception\ConfigurationException
-     */
-    public function testCheckConnectException()
-    {
-        $db = new Db\Db();
-        $db->setConnect(array());
-    }
-
-    /**
-     * fetchOne
-     */
-    public function testFetchOne()
-    {
-        $result = $this->db->fetchOne("SELECT COUNT(*) FROM test");
-        $this->assertEquals(42, $result);
-    }
-
-    /**
-     * fetchRow
-     */
-    public function testFetchRow()
-    {
-        $result = $this->db->fetchRow("SELECT * FROM test LIMIT 1");
-        $this->assertEquals(4, sizeof($result));
-    }
-
-    /**
-     * fetchAll
-     */
-    public function testFetchAll()
-    {
-        $result = $this->db->fetchAll("SELECT * FROM test LIMIT 10");
-        $this->assertEquals(10, sizeof($result));
-    }
-
-    /**
-     * fetchColumn
-     */
-    public function testFetchColumn()
-    {
-        $result = $this->db->fetchColumn("SELECT id FROM test LIMIT 10");
-        $this->assertEquals(10, sizeof($result));
-    }
-
-    /**
-     * fetchGroup
-     */
-    public function testFetchGroup()
-    {
-        $result = $this->db->fetchGroup("SELECT status, id, name FROM test");
-
-        $this->assertArrayHasKey('active', $result);
-        $this->assertArrayHasKey('disable', $result);
-        $this->assertArrayHasKey('delete', $result);
-    }
-
-    /**
-     * fetchColumnGroup
-     */
-    public function testFetchColumnGroup()
-    {
-        $result = $this->db->fetchColumnGroup("SELECT status, COUNT(id) FROM test GROUP BY status");
-
-        $this->assertArrayHasKey('active', $result);
-        $this->assertArrayHasKey('disable', $result);
-        $this->assertArrayHasKey('delete', $result);
-    }
-
-    /**
-     * fetchPairs
-     */
-    public function testFetchPairs()
-    {
-        $result = $this->db->fetchPairs("SELECT email, name FROM test LIMIT 10");
-        $this->assertEquals(10, sizeof($result));
-    }
-
-    /**
-     * fetchObject to default class
-     */
-    public function testFetchObjectToStdClass()
-    {
-        $result = $this->db->fetchObject("SELECT * FROM test LIMIT 1");
-        $this->assertInstanceOf('\stdClass', $result);
-    }
-
-    /**
-     * fetchObjects to declared class
-     */
-    public function testFetchObjectToDeclaredClass()
-    {
-        $result = $this->db->fetchObject("SELECT * FROM test LIMIT 10", array(), 'stdClass');
-        $this->assertInstanceOf('\stdClass', $result);
-    }
-
-    /**
-     * fetchObject to instance
-     */
-    public function testFetchObjectToInstance()
-    {
-        $result = $this->db->fetchObject("SELECT * FROM test LIMIT 1", array(), new \stdClass());
-        $this->assertInstanceOf('\stdClass', $result);
-    }
-
-    /**
-     * fetchObjects to default class
-     */
-    public function testFetchObjectsToStdClass()
-    {
-        $result = $this->db->fetchObjects("SELECT * FROM test LIMIT 10");
-        $this->assertEquals(10, sizeof($result));
-        $this->assertInstanceOf('\stdClass', current($result));
-    }
-
-    /**
-     * fetchObjects to declared class
-     */
-    public function testFetchObjectsToDeclaredClass()
-    {
-        $result = $this->db->fetchObjects("SELECT * FROM test LIMIT 10", array(), 'stdClass');
-        $this->assertEquals(10, sizeof($result));
-        $this->assertInstanceOf('\stdClass', current($result));
-    }
-
-    /**
-     * Transaction
-     */
-    public function testTransactionTrue()
-    {
-        $result = $this->db->transaction(function () {
-            $this->db->query('SELECT * FROM test LIMIT 10');
-        });
-        $this->assertTrue($result);
-    }
-
-    /**
-     * Transaction Fail
-     */
-    public function testTransactionFalse()
-    {
-        $result = $this->db->transaction(function () {
-            $this->db->query('DELETE FROM test LIMIT 1');
-            $this->db->query('DELETE FROM test LIMIT 1');
-            $this->db->query('DELETE FROM test LIMIT 1');
-            $this->db->query('DELETE FROM notexiststable LIMIT 1');
-        });
-        $this->assertFalse($result);
-    }
-
-    /**
-     * Transaction fail
-     * @expectedException \Bluz\Db\Exception\DbException
-     */
-    public function testTransactionInvalidCallbackThrowException()
-    {
-        $this->db->transaction('foo');
-    }
-
-    /**
-     * Insert Query Builder
+     * @todo Implement testInsert().
      */
     public function testInsert()
     {
-        $query = $this->db->insert('test');
-        $this->assertInstanceOf('\Bluz\Db\Query\Insert', $query);
+        // Remove the following lines when you implement this test.
+        $this->markTestIncomplete(
+            'This test has not been implemented yet.'
+        );
     }
 
     /**
-     * Update Query Builder
+     * @todo Implement testUpdate().
      */
     public function testUpdate()
     {
-        $query = $this->db->update('test');
-        $this->assertInstanceOf('\Bluz\Db\Query\Update', $query);
+        // Remove the following lines when you implement this test.
+        $this->markTestIncomplete(
+            'This test has not been implemented yet.'
+        );
     }
 
     /**
-     * Delete Query Builder
+     * @todo Implement testDelete().
      */
     public function testDelete()
     {
-        $query = $this->db->delete('test');
-        $this->assertInstanceOf('\Bluz\Db\Query\Delete', $query);
+        // Remove the following lines when you implement this test.
+        $this->markTestIncomplete(
+            'This test has not been implemented yet.'
+        );
     }
 }

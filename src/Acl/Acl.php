@@ -12,7 +12,6 @@
 namespace Bluz\Acl;
 
 use Bluz\Common\Options;
-use Bluz\Proxy\Auth;
 
 /**
  * Acl
@@ -27,15 +26,16 @@ class Acl
     use Options;
 
     /**
-     * Check user access by pair module-privilege
+     * Is allowed
+     *
      * @param string $module
      * @param string $privilege
-     * @return bool
+     * @return boolean
      */
     public function isAllowed($module, $privilege)
     {
         if ($privilege) {
-            $user = Auth::getIdentity();
+            $user = app()->getAuth()->getIdentity();
             if (!$user || !$user->hasPrivilege($module, $privilege)) {
                 return false;
             }

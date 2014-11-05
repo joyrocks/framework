@@ -12,6 +12,7 @@
 namespace Bluz\Http;
 
 use Bluz\Request\AbstractRequest;
+use Bluz\Request\RequestException;
 
 /**
  * HTTP Request
@@ -23,6 +24,19 @@ use Bluz\Request\AbstractRequest;
  */
 class Request extends AbstractRequest
 {
+    /**
+     * @const string HTTP METHOD constant names
+     */
+    const METHOD_OPTIONS = 'OPTIONS';
+    const METHOD_GET = 'GET';
+    const METHOD_HEAD = 'HEAD';
+    const METHOD_PATCH = 'PATCH';
+    const METHOD_POST = 'POST';
+    const METHOD_PUT = 'PUT';
+    const METHOD_DELETE = 'DELETE';
+    const METHOD_TRACE = 'TRACE';
+    const METHOD_CONNECT = 'CONNECT';
+
     /**
      * @const string HTTP SCHEME constant names
      */
@@ -42,10 +56,9 @@ class Request extends AbstractRequest
     {
         $this->method = $this->getServer('REQUEST_METHOD');
         $request = file_get_contents('php://input');
-        $contentType = $this->getHeader('Content-Type');
 
         // support header like "application/json" and "application/json; charset=utf-8"
-        if ($contentType && stristr($contentType, 'application/json')) {
+        if (stristr($this->getHeader('Content-Type'), 'application/json')) {
             $data = (array) json_decode($request);
         } else {
             switch ($this->method) {
@@ -67,14 +80,13 @@ class Request extends AbstractRequest
      *
      * @link http://msdn.microsoft.com/en-us/library/system.web.httprequest.item.aspx
      * @param string $key
-     * @param null $default
      * @return mixed
      */
-    public function getParam($key, $default = null)
+    public function __get($key)
     {
         switch (true) {
-            case isset($this->params[$key]):
-                return parent::getParam($key);
+            case parent::__isset($key):
+                return parent::__get($key);
             case isset($_GET[$key]):
                 return $_GET[$key];
             case isset($_POST[$key]):
@@ -86,7 +98,59 @@ class Request extends AbstractRequest
             case isset($_ENV[$key]):
                 return $_ENV[$key];
             default:
-                return $default;
+                return null;
+        }
+    }
+
+    /**
+     * Check to see if a property is set
+     *
+     * @param string $key
+     * @return boolean
+     */
+    public function __isset($key)
+    {
+        switch (true) {
+            case parent::__isset($key):
+                return true;
+            case isset($_GET[$key]):
+                return true;
+            case isset($_POST[$key]):
+                return true;
+            case isset($_COOKIE[$key]):
+                return true;
+            case isset($_SERVER[$key]):
+                return true;
+            case isset($_ENV[$key]):
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    /**
+     * Unset custom param
+     *
+     * @param $key
+     */
+    public function __unset($key)
+    {
+        parent::__unset($key);
+
+        if (isset($_GET[$key])) {
+            unset($_GET[$key]);
+        }
+        if (isset($_POST[$key])) {
+            unset($_POST[$key]);
+        }
+        if (isset($_COOKIE[$key])) {
+            unset($_COOKIE[$key]);
+        }
+        if (isset($_SERVER[$key])) {
+            unset($_SERVER[$key]);
+        }
+        if (isset($_ENV[$key])) {
+            unset($_ENV[$key]);
         }
     }
 
@@ -111,11 +175,51 @@ class Request extends AbstractRequest
     }
 
     /**
+     * Is this a GET method request?
+     *
+     * @return bool
+     */
+    public function isGet()
+    {
+        return ($this->getMethod() === self::METHOD_GET);
+    }
+
+    /**
+     * Is this a POST method request?
+     *
+     * @return bool
+     */
+    public function isPost()
+    {
+        return ($this->getMethod() === self::METHOD_POST);
+    }
+
+    /**
+     * Is this a PUT method request?
+     *
+     * @return bool
+     */
+    public function isPut()
+    {
+        return ($this->getMethod() === self::METHOD_PUT);
+    }
+
+    /**
+     * Is this a DELETE method request?
+     *
+     * @return bool
+     */
+    public function isDelete()
+    {
+        return ($this->getMethod() === self::METHOD_DELETE);
+    }
+
+    /**
      * Is the request a Javascript XMLHttpRequest?
      *
      * Should work with Prototype/Script.aculo.us, possibly others.
      *
-     * @return bool
+     * @return boolean
      */
     public function isXmlHttpRequest()
     {
@@ -125,15 +229,12 @@ class Request extends AbstractRequest
     /**
      * Is this a Flash request?
      *
-     * @return bool
+     * @return boolean
      */
     public function isFlashRequest()
     {
-        if ($header = $this->getHeader('USER_AGENT')) {
-            return (strstr(strtolower($header), ' flash')) ? true : false;
-        } else {
-            return false;
-        }
+        $header = strtolower($this->getHeader('USER_AGENT'));
+        return (strstr($header, ' flash')) ? true : false;
     }
 
     /**
@@ -142,7 +243,7 @@ class Request extends AbstractRequest
      * Accept header, 'Accept-Encoding' to get the Accept-Encoding header.
      *
      * @param string $header HTTP header name
-     * @return string|false HTTP header value, or false if not found
+     * @return string|boolean HTTP header value, or false if not found
      */
     public function getHeader($header)
     {
@@ -175,8 +276,8 @@ class Request extends AbstractRequest
      * If no $key is passed, returns the entire $_GET array.
      *
      * @param string $key
-     * @param string|array $default Default value to use if key not found
-     * @return string|array Returns null if key does not exist
+     * @param mixed $default Default value to use if key not found
+     * @return mixed Returns null if key does not exist
      */
     public function getQuery($key = null, $default = null)
     {
@@ -187,14 +288,15 @@ class Request extends AbstractRequest
         return (isset($_GET[$key])) ? $_GET[$key] : $default;
     }
 
+
     /**
      * Retrieve a member of the $_POST super global
      *
      * If no $key is passed, returns the entire $_POST array.
      *
      * @param string $key
-     * @param string|array $default Default value to use if key not found
-     * @return string|array Returns null if key does not exist
+     * @param mixed $default Default value to use if key not found
+     * @return mixed Returns null if key does not exist
      */
     public function getPost($key = null, $default = null)
     {
@@ -203,37 +305,6 @@ class Request extends AbstractRequest
         }
 
         return (isset($_POST[$key])) ? $_POST[$key] : $default;
-    }
-
-    /**
-     * Retrieve a member of the $_COOKIE super global
-     *
-     * If no $key is passed, returns the entire $_COOKIE array.
-     *
-     * @todo How to retrieve from nested arrays
-     * @param string $key
-     * @param string $default Default value to use if key not found
-     * @return string|array Returns null if key does not exist
-     */
-    public function getCookie($key = null, $default = null)
-    {
-        if (null === $key) {
-            return $_COOKIE;
-        }
-
-        return (isset($_COOKIE[$key])) ? $_COOKIE[$key] : $default;
-    }
-
-    /**
-     * setFileUpload
-     *
-     * @param FileUpload $fileUpload
-     *
-     * @return void
-     */
-    public function setFileUpload(FileUpload $fileUpload)
-    {
-        $this->fileUpload = $fileUpload;
     }
 
     /**
@@ -247,6 +318,43 @@ class Request extends AbstractRequest
             $this->fileUpload = new FileUpload();
         }
         return $this->fileUpload;
+    }
+
+    /**
+     * Retrieve a member of the $_COOKIE superglobal
+     *
+     * If no $key is passed, returns the entire $_COOKIE array.
+     *
+     * @todo How to retrieve from nested arrays
+     * @param string $key
+     * @param mixed $default Default value to use if key not found
+     * @return mixed Returns null if key does not exist
+     */
+    public function getCookie($key = null, $default = null)
+    {
+        if (null === $key) {
+            return $_COOKIE;
+        }
+
+        return (isset($_COOKIE[$key])) ? $_COOKIE[$key] : $default;
+    }
+
+    /**
+     * Retrieve a member of the $_SERVER superglobal
+     *
+     * If no $key is passed, returns the entire $_SERVER array.
+     *
+     * @param string $key
+     * @param mixed $default Default value to use if key not found
+     * @return mixed Returns null if key does not exist
+     */
+    public function getServer($key = null, $default = null)
+    {
+        if (null === $key) {
+            return $_SERVER;
+        }
+
+        return (isset($_SERVER[$key])) ? $_SERVER[$key] : $default;
     }
 
     /**
@@ -271,9 +379,7 @@ class Request extends AbstractRequest
 
         if (null === $name) {
             return '';
-        } elseif (($scheme == self::SCHEME_HTTP && $port == 80)
-            || ($scheme == self::SCHEME_HTTPS && $port == 443)
-            || !$port) {
+        } elseif (($scheme == self::SCHEME_HTTP && $port == 80) || ($scheme == self::SCHEME_HTTPS && $port == 443)) {
             return $name;
         } else {
             return $name . ':' . $port;
@@ -308,9 +414,29 @@ class Request extends AbstractRequest
     }
 
     /**
+     * Get the request URI without baseUrl
+     *
+     * @return string
+     */
+    public function getCleanUri()
+    {
+        if ($this->cleanUri === null) {
+            $uri = parse_url($this->getRequestUri());
+            $uri = $uri['path'];
+
+            if ($this->getBaseUrl() && strpos($uri, $this->getBaseUrl()) === 0) {
+                $uri = substr($uri, strlen($this->getBaseUrl()));
+            }
+            $this->cleanUri = $uri;
+        }
+        return $this->cleanUri;
+    }
+
+
+    /**
      * Get the client's IP address
      *
-     * @param  bool $checkProxy
+     * @param  boolean $checkProxy
      * @return string
      */
     public function getClientIp($checkProxy = true)

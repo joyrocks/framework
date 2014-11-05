@@ -1,0 +1,31 @@
+<phpunit backupGlobals="false"
+         backupStaticAttributes="false"
+         stopOnFailure="false"
+         colors="true"
+         verbose="true"
+         bootstrap="./bootstrap.php">
+    <testsuites>
+        <testsuite name="Framework Test Suite">
+            <directory>./src/</directory>
+        </testsuite>
+    </testsuites>
+    <listeners>
+        <listener class="\Bluz\Tests\TestListener" />
+    </listeners>
+    <php>
+        <var name="DB_TYPE" value="mysql" />
+        <var name="DB_HOST" value="localhost" />
+        <var name="DB_NAME" value="bluz" />
+        <var name="DB_USER" value="root" />
+        <var name="DB_PASS" value="" />
+    </php>
+    <filter>
+        <whitelist>
+            <directory suffix=".php">../Bluz</directory>
+            <exclude>
+                <directory suffix=".phtml">../Bluz</directory>
+                <directory suffix=".php">../Bluz/configs</directory>
+            </exclude>
+        </whitelist>
+    </filter>
+</phpunit>
