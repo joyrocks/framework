@@ -11,9 +11,9 @@
  */
 namespace Bluz\Grid\Source;
 
-use Bluz\Application\Application;
 use Bluz\Db;
 use Bluz\Grid;
+use Bluz\Proxy;
 
 /**
  * SQL Source Adapter for Grid package
@@ -33,14 +33,14 @@ class SelectSource extends AbstractSource
     /**
      * setSource
      *
-     * @param $source
+     * @param Db\Query\Select $source
      * @throws \Bluz\Grid\GridException
      * @return self
      */
     public function setSource($source)
     {
         if (!$source instanceof Db\Query\Select) {
-            throw new Grid\GridException("Source of SelectSource should be Db\\Query\\Select object");
+            throw new Grid\GridException("Source of `SelectSource` should be `Db\\Query\\Select` object");
         }
         $this->source = $source;
 
@@ -80,7 +80,7 @@ class SelectSource extends AbstractSource
         $this->source->setPage($settings['page']);
 
         // prepare query
-        $connect = Application::getInstance()->getConfigData('db', 'connect');
+        $connect = Proxy\Config::getData('db', 'connect');
         if (strtolower($connect['type']) == 'mysql') { // MySQL
             $select = $this->source->getQueryPart('select');
             $select[0] = 'SQL_CALC_FOUND_ROWS ' . current($select);
@@ -88,7 +88,7 @@ class SelectSource extends AbstractSource
 
             // run queries
             $data = $this->source->execute();
-            $total = Db\Db::getDefaultAdapter()->fetchOne('SELECT FOUND_ROWS()');
+            $total = Proxy\Db::fetchOne('SELECT FOUND_ROWS()');
         } else { // other
             $totalSource = clone $this->source;
             $totalSource->select('COUNT(*)');

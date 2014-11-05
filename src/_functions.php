@@ -12,6 +12,7 @@
  * @author   Anton Shevchuk
  * @created  07.09.12 11:29
  */
+
 if (!function_exists('debug')) {
     /**
      * Debug variables
@@ -21,12 +22,13 @@ if (!function_exists('debug')) {
      *     debug(new stdClass());
      *     debug($_GET, $_POST, $_FILES);
      *
+     * @codeCoverageIgnore
      * @return void
      */
     function debug()
     {
         // check definition
-        if (!defined('DEBUG') or !DEBUG) {
+        if (!getenv('BLUZ_DEBUG')) {
             return;
         }
 
@@ -94,10 +96,10 @@ if (!function_exists('__')) {
      *     // equal to sprintf(gettext('Message to %s'), 'Username')
      *     __('Message to %s', 'Username');
      *
-     * @param string $message
+     * @param string $message,...
      * @return string
      */
-    function __($message)
+    function __()
     {
         return call_user_func_array(['\Bluz\Translator\Translator', 'translate'], func_get_args());
     }
@@ -118,10 +120,10 @@ if (!function_exists('_n')) {
      *
      * @param string $singular
      * @param string $plural
-     * @param integer $number
+     * @param integer $number,...
      * @return string
      */
-    function _n($singular, $plural, $number)
+    function _n()
     {
         return call_user_func_array(['\Bluz\Translator\Translator', 'translatePlural'], func_get_args());
     }

@@ -11,13 +11,13 @@
  */
 namespace Bluz\Crud;
 
-use Bluz\Common\Exception;
+use Bluz\Common\Exception\CommonException;
 
 /**
- * Exception
+ * CRUD Exception
  *
  * @package  Bluz\Crud
  */
-class CrudException extends Exception
+class CrudException extends CommonException
 {
 }

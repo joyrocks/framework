@@ -102,200 +102,6 @@ class AbstractRequest
      */
     protected $rawParams = array();
 
-    /**
-     * Retrieve the module name
-     *
-     * @param string $name
-     * @return self
-     */
-    public function setModule($name)
-    {
-        $this->module = $name;
-        return $this;
-    }
-
-    /**
-     * Retrieve the module name
-     *
-     * @return string
-     */
-    public function getModule()
-    {
-        return $this->module;
-    }
-
-    /**
-     * Retrieve the controller name
-     *
-     * @param string $name
-     * @return self
-     */
-    public function setController($name)
-    {
-        $this->controller = $name;
-        return $this;
-    }
-
-    /**
-     * Retrieve the controller name
-     *
-     * @return string
-     */
-    public function getController()
-    {
-        return $this->controller;
-    }
-
-    /**
-     * Access values
-     *
-     * @param string $key
-     * @return mixed
-     */
-    public function __get($key)
-    {
-        return (isset($this->params[$key]) ? $this->params[$key] : null);
-    }
-
-    /**
-     * Set an action parameter
-     *
-     * A $value of null will unset the $key if it exists
-     *
-     * @param string $key
-     * @param mixed $value
-     * @return void
-     */
-    public function __set($key, $value)
-    {
-        $key = (string)$key;
-
-        if ((null === $value) && isset($this->params[$key])) {
-            unset($this->params[$key]);
-        } elseif (null !== $value) {
-            $this->params[$key] = $value;
-        }
-    }
-
-    /**
-     * Check to see if a property is set
-     *
-     * @param string $key
-     * @return boolean
-     */
-    public function __isset($key)
-    {
-        return isset($this->params[$key]);
-    }
-
-    /**
-     * Unset custom param
-     *
-     * @param $key
-     */
-    public function __unset($key)
-    {
-        unset($this->params[$key]);
-    }
-
-    /**
-     * Set an action parameter
-     *
-     * A $value of null will unset the $key if it exists
-     *
-     * @param string $key
-     * @param mixed $value
-     * @return void
-     */
-    public function setParam($key, $value)
-    {
-        $this->__set($key, $value);
-    }
-
-    /**
-     * Get an action parameter
-     *
-     * @param string $key
-     * @param mixed $default Default value to use if key not found
-     * @return mixed
-     */
-    public function getParam($key, $default = null)
-    {
-        return $this->__get($key) ? : $default;
-    }
-
-    /**
-     * Overwrite all parameters
-     *
-     * @param array $params
-     * @return AbstractRequest
-     */
-    public function setParams(array $params)
-    {
-        $this->params = $params;
-        return $this;
-    }
-
-    /**
-     * Get parameters
-     *
-     * @return array
-     */
-    public function getParams()
-    {
-        return $this->params;
-    }
-
-    /**
-     * Set raw params, w/out module and controller
-     *
-     * @param array $params
-     * @return array
-     */
-    public function setRawParams(array $params)
-    {
-        $this->rawParams = $params;
-        return $this;
-    }
-
-    /**
-     * Get raw params, w/out module and controller
-     *
-     * @return array
-     */
-    public function getRawParams()
-    {
-        return $this->rawParams;
-    }
-
-
-    /**
-     * Get all request parameters
-     *
-     * @return array
-     */
-    public function getAllParams()
-    {
-        return $this->params;
-    }
-
-    /**
-     * Retrieve a member of the $_ENV superglobal
-     *
-     * If no $key is passed, returns the entire $_ENV array.
-     *
-     * @param string $key
-     * @param mixed $default Default value to use if key not found
-     * @return mixed Returns null if key does not exist
-     */
-    public function getEnv($key = null, $default = null)
-    {
-        if (null === $key) {
-            return $_ENV;
-        }
-
-        return (isset($_ENV[$key])) ? $_ENV[$key] : $default;
-    }
 
     /**
      * Return HTTP method or CLI
@@ -313,18 +119,17 @@ class AbstractRequest
      * Overwrite method
      *
      * @param $method
-     * @return AbstractRequest
+     * @return void
      */
     public function setMethod($method)
     {
         $this->method = $method;
-        return $this;
     }
 
     /**
-     * check CLI
+     * Check CLI
      *
-     * @return boolean
+     * @return bool
      */
     public function isCli()
     {
@@ -332,37 +137,93 @@ class AbstractRequest
     }
 
     /**
-     * check HTTP
+     * Check HTTP
      *
-     * @return boolean
+     * @return bool
      */
     public function isHttp()
     {
-        return $this->method == self::METHOD_HTTP;
+        return $this->method != self::METHOD_CLI;
+    }
+
+    /**
+     * Is this a GET method request?
+     *
+     * @return bool
+     */
+    public function isGet()
+    {
+        return ($this->getMethod() === self::METHOD_GET);
+    }
+
+    /**
+     * Is this a POST method request?
+     *
+     * @return bool
+     */
+    public function isPost()
+    {
+        return ($this->getMethod() === self::METHOD_POST);
+    }
+
+    /**
+     * Is this a PUT method request?
+     *
+     * @return bool
+     */
+    public function isPut()
+    {
+        return ($this->getMethod() === self::METHOD_PUT);
+    }
+
+    /**
+     * Is this a DELETE method request?
+     *
+     * @return bool
+     */
+    public function isDelete()
+    {
+        return ($this->getMethod() === self::METHOD_DELETE);
+    }
+
+    /**
+     * Get the base URL.
+     *
+     * @return string
+     */
+    public function getBaseUrl()
+    {
+        return $this->baseUrl;
     }
 
     /**
      * Set the base URL.
      *
      * @param  string $baseUrl
-     * @return self
+     * @return void
      */
     public function setBaseUrl($baseUrl)
     {
         $this->baseUrl = rtrim($baseUrl, '/') . '/';
-        return $this;
     }
 
     /**
-     * Set the request URI.
+     * Get the request URI without baseUrl
      *
-     * @param  string $requestUri
-     * @return self
+     * @return string
      */
-    public function setRequestUri($requestUri)
+    public function getCleanUri()
     {
-        $this->requestUri = $requestUri;
-        return $this;
+        if ($this->cleanUri === null) {
+            $uri = parse_url($this->getRequestUri());
+            $uri = $uri['path'];
+
+            if ($this->getBaseUrl() && strpos($uri, $this->getBaseUrl()) === 0) {
+                $uri = substr($uri, strlen($this->getBaseUrl()));
+            }
+            $this->cleanUri = $uri;
+        }
+        return $this->cleanUri;
     }
 
     /**
@@ -373,5 +234,176 @@ class AbstractRequest
     public function getRequestUri()
     {
         return $this->requestUri;
+    }
+
+    /**
+     * Set the request URI.
+     *
+     * @param  string $requestUri
+     * @return void
+     */
+    public function setRequestUri($requestUri)
+    {
+        $this->requestUri = $requestUri;
+    }
+
+    /**
+     * Get an action parameter
+     *
+     * @param string $key
+     * @param mixed $default Default value to use if key not found
+     * @return mixed
+     */
+    public function getParam($key, $default = null)
+    {
+        return isset($this->params[$key]) ? $this->params[$key] : $default;
+    }
+
+    /**
+     * Set an action parameter
+     *
+     * A $value of null will unset the $key if it exists
+     *
+     * @param string $key
+     * @param mixed $value
+     * @return void
+     */
+    public function setParam($key, $value)
+    {
+        $key = (string)$key;
+
+        if ((null === $value) && isset($this->params[$key])) {
+            unset($this->params[$key]);
+        } elseif (null !== $value) {
+            $this->params[$key] = $value;
+        }
+    }
+
+    /**
+     * Get parameters
+     *
+     * @return array
+     */
+    public function getParams()
+    {
+        return $this->params;
+    }
+
+    /**
+     * Get all request parameters
+     *
+     * @return array
+     */
+    public function getAllParams()
+    {
+        return $this->getParams();
+    }
+
+    /**
+     * Overwrite all parameters
+     *
+     * @param array $params
+     * @return void
+     */
+    public function setParams(array $params)
+    {
+        $this->params = $params;
+    }
+
+    /**
+     * Get raw params, w/out module and controller
+     *
+     * @return array
+     */
+    public function getRawParams()
+    {
+        return $this->rawParams;
+    }
+
+    /**
+     * Set raw params, w/out module and controller
+     *
+     * @param array $params
+     * @return void
+     */
+    public function setRawParams(array $params)
+    {
+        $this->rawParams = $params;
+    }
+
+    /**
+     * Retrieve a member of the $_ENV super global
+     *
+     * If no $key is passed, returns the entire $_ENV array.
+     *
+     * @param string $key
+     * @param mixed $default Default value to use if key not found
+     * @return mixed Returns null if key does not exist
+     */
+    public function getEnv($key = null, $default = null)
+    {
+        if (null === $key) {
+            return $_ENV;
+        }
+        return (isset($_ENV[$key])) ? $_ENV[$key] : $default;
+    }
+
+    /**
+     * Retrieve a member of the $_SERVER super global
+     *
+     * If no $key is passed, returns the entire $_SERVER array.
+     *
+     * @param string $key
+     * @param string $default Default value to use if key not found
+     * @return string Returns null if key does not exist
+     */
+    public function getServer($key = null, $default = null)
+    {
+        if (null === $key) {
+            return $_SERVER;
+        }
+        return (isset($_SERVER[$key])) ? $_SERVER[$key] : $default;
+    }
+
+    /**
+     * Retrieve the module name
+     *
+     * @return string
+     */
+    public function getModule()
+    {
+        return $this->module;
+    }
+
+    /**
+     * Retrieve the module name
+     *
+     * @param string $name
+     * @return void
+     */
+    public function setModule($name)
+    {
+        $this->module = $name;
+    }
+
+    /**
+     * Retrieve the controller name
+     *
+     * @return string
+     */
+    public function getController()
+    {
+        return $this->controller;
+    }
+
+    /**
+     * Retrieve the controller name
+     *
+     * @param string $name
+     * @return void
+     */
+    public function setController($name)
+    {
+        $this->controller = $name;
     }
 }

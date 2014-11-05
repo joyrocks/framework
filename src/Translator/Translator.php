@@ -11,8 +11,8 @@
  */
 namespace Bluz\Translator;
 
+use Bluz\Common\Exception\ConfigurationException;
 use Bluz\Common\Options;
-use Bluz\Config\ConfigException;
 
 /**
  * Translator
@@ -86,7 +86,7 @@ class Translator
      * Initialization
      *
      * @throw \Bluz\Config\ConfigException
-     * @return boolean
+     * @return void
      */
     protected function initOptions()
     {
@@ -117,14 +117,14 @@ class Translator
      *
      * @param string $domain of text for gettext setup
      * @param string $path on filesystem
-     * @throws ConfigException
+     * @throws ConfigurationException
      * @return self
      */
     public function addTextDomain($domain, $path)
     {
         // check path
         if (!is_dir($path)) {
-            throw new ConfigException("Translator configuration path `$path` not found");
+            throw new ConfigurationException("Translator configuration path `$path` not found");
         }
 
         bindtextdomain($domain, $path);
@@ -138,16 +138,13 @@ class Translator
     /**
      * Translate message
      *
-     * Example of usage:
-     * <code>
-     * // simple
-     * // equal to gettext('Message')
-     * Translator::translate('Message');
+     * Simple example of usage
+     * equal to <code>gettext('Message')</code>
+     *     Translator::translate('Message');
      *
-     * // simple replace of one or more argument(s)
-     * // equal to sprintf(gettext('Message to %s'), 'Username')
-     * Translator::translate('Message to %s', 'Username');
-     * </code>
+     * Simple replace of one or more argument(s)
+     * equal to <code>sprintf(gettext('Message to %s'), 'Username')</code>
+     *     Translator::translate('Message to %s', 'Username');
      *
      * @param string $message
      * @return string
@@ -169,16 +166,13 @@ class Translator
     /**
      * Translate plural form
      *
-     * Example of usage:
-     * <code>
-     * // plural form + sprintf
-     * // equal to sprintf(ngettext('%d comment', '%d comments', 4), 4)
-     * Translator::translatePlural('%d comment', '%d comments', 4, 4)
+     * Example of usage plural form + sprintf
+     * equal to <code>sprintf(ngettext('%d comment', '%d comments', 4), 4)</code>
+     *     Translator::translatePlural('%d comment', '%d comments', 4, 4)
      *
-     * // plural form + sprintf
-     * // equal to sprintf(ngettext('%d comment', '%d comments', 4), 4, 'Topic')
-     * Translator::translatePlural('%d comment to %s', '%d comments to %s', 4, 'Topic')
-     * </code>
+     * Example of usage plural form + sprintf
+     * equal to <code>sprintf(ngettext('%d comment', '%d comments', 4), 4, 'Topic')</code>
+     *     Translator::translatePlural('%d comment to %s', '%d comments to %s', 4, 'Topic')
      *
      * @link http://docs.translatehouse.org/projects/localization-guide/en/latest/l10n/pluralforms.html
      * @param string $singular

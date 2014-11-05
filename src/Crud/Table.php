@@ -11,14 +11,13 @@
  */
 namespace Bluz\Crud;
 
+use Bluz\Application\Exception\ApplicationException;
 use Bluz\Application\Exception\NotFoundException;
-use Bluz\Common\Options;
 use Bluz\Db;
 use Bluz\Db\Row;
-use Bluz\Request\AbstractRequest;
 
 /**
- * Crud
+ * Crud Table
  *
  * @package  Bluz\Crud
  *
@@ -28,13 +27,12 @@ use Bluz\Request\AbstractRequest;
 class Table extends AbstractCrud
 {
     /**
-     * @var \Bluz\Db\Table instance
+     * @var \Bluz\Db\Table Instance of Db\Table
      */
     protected $table;
 
     /**
      * Setup Table instance
-     *
      * @param Db\Table $table
      * @return self
      */
@@ -46,8 +44,7 @@ class Table extends AbstractCrud
 
     /**
      * Return table instance for manipulation
-     *
-     * @throws CrudException
+     * @throws ApplicationException
      * @return Db\Table
      */
     public function getTable()
@@ -57,8 +54,8 @@ class Table extends AbstractCrud
             $tableClass = substr($crudClass, 0, strrpos($crudClass, '\\', 1) + 1) . 'Table';
 
             // check class initialization
-            if (!is_subclass_of($tableClass, '\Bluz\Db\Table')) {
-                throw new CrudException("`Table` class is not exists or not initialized");
+            if (!class_exists($tableClass) or !is_subclass_of($tableClass, '\\Bluz\\Db\\Table')) {
+                throw new ApplicationException("`Table` class is not exists or not initialized");
             }
 
             /**
@@ -72,8 +69,7 @@ class Table extends AbstractCrud
     }
 
     /**
-     * getPrimaryKey
-     *
+     * Get primary key
      * @return array
      */
     public function getPrimaryKey()
@@ -87,7 +83,6 @@ class Table extends AbstractCrud
 
     /**
      * Get record from Db or create new
-     *
      * @param mixed $primary
      * @throws NotFoundException
      * @return Row
@@ -107,26 +102,19 @@ class Table extends AbstractCrud
     }
 
     /**
-     * createOne
-     *
+     * Create item
      * @param array $data
      * @return integer
      */
     public function createOne($data)
     {
-        $this->validate(null, $data);
-        $this->validateCreate($data);
-        $this->checkErrors();
-
         $row = $this->getTable()->create();
-
         $row->setFromArray($data);
         return $row->save();
     }
 
     /**
-     * Update Record
-     *
+     * Update item
      * @param mixed $primary
      * @param array $data
      * @throws NotFoundException
@@ -140,17 +128,12 @@ class Table extends AbstractCrud
             throw new NotFoundException("Record not found");
         }
 
-        $this->validate($primary, $data);
-        $this->validateUpdate($primary, $data);
-        $this->checkErrors();
-
         $row->setFromArray($data);
         return $row->save();
     }
 
     /**
-     * Delete Record
-     *
+     * Delete item
      * @param mixed $primary
      * @throws NotFoundException
      * @return integer

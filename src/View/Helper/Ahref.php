@@ -12,37 +12,41 @@
 namespace Bluz\View\Helper;
 
 use Bluz\View\View;
+use Bluz\Proxy\Request;
+use Bluz\Proxy\Translator;
 
 return
     /**
+     * Generate HTML for <a> element
+     *
      * @author ErgallM
      *
+     * @var View $this
      * @param string $text
      * @param string|array $href
      * @param array $attributes HTML attributes
-     * @return \Closure
+     * @return string
      */
     function ($text, $href, array $attributes = []) {
-    /** @var View $this */
-    // if href is settings for url helper
-    if (is_array($href)) {
-        $href = call_user_func_array(array($this, 'url'), $href);
-    }
-
-    // href can be null, if access is denied
-    if (null === $href) {
-        return '';
-    }
-
-    if ($href == app()->getRequest()->getRequestUri()) {
-        if (isset($attributes['class'])) {
-            $attributes['class'] .= ' on';
-        } else {
-            $attributes['class'] = 'on';
+        // if href is settings for url helper
+        if (is_array($href)) {
+            $href = call_user_func_array(array($this, 'url'), $href);
         }
-    }
 
-    $attributes = $this->attributes($attributes);
+        // href can be null, if access is denied
+        if (null === $href) {
+            return '';
+        }
 
-    return '<a href="' . $href . '" ' . $attributes . '>' . __($text) . '</a>';
+        if ($href == Request::getRequestUri()) {
+            if (isset($attributes['class'])) {
+                $attributes['class'] .= ' on';
+            } else {
+                $attributes['class'] = 'on';
+            }
+        }
+
+        $attributes = $this->attributes($attributes);
+
+        return '<a href="' . $href . '" ' . $attributes . '>' . Translator::translate($text) . '</a>';
     };

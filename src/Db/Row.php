@@ -11,7 +11,7 @@
  */
 namespace Bluz\Db;
 
-use Bluz\Db\Exception\DbException;
+use Bluz\Common\Container;
 use Bluz\Db\Exception\InvalidPrimaryKeyException;
 use Bluz\Db\Exception\RelationNotFoundException;
 use Bluz\Db\Exception\TableNotFoundException;
@@ -44,28 +44,25 @@ use Bluz\Db\Exception\TableNotFoundException;
  */
 class Row implements \JsonSerializable, \ArrayAccess
 {
+    use Container\Container;
+    use Container\ArrayAccess;
+    use Container\JsonSerialize;
+    use Container\MagicAccess;
+
     /**
-     * Table class or instance.
-     *
-     * @var Table
+     * @var Table Table class instance
      */
     protected $table;
 
     /**
-     * Primary row key(s).
-     *
-     * @var array
+     * @var string Table class name
      */
-    protected $primary;
+    protected $tableClass;
 
     /**
-     * The data for each column in the row (column_name => value).
-     * The keys must match the physical names of columns in the
-     * table for which this row is defined.
-     *
-     * @var array
+     * @var array Primary row key(s)
      */
-    protected $data = array();
+    protected $primary;
 
     /**
      * This is set to a copy of $data when the data is fetched from
@@ -77,24 +74,14 @@ class Row implements \JsonSerializable, \ArrayAccess
     protected $clean = array();
 
     /**
-     * Relations rows
-     *
-     * @var array
+     * @var array Relations rows
      */
     protected $relations = array();
 
     /**
-     * Relations data
-     *
-     * @var array
-     */
-    protected $relationsData = array();
-
-    /**
-     * __construct
-     *
+     * Create Row instance
      * @param array $data
-     * @return \Bluz\Db\Row
+     * @return Row
      */
     public function __construct($data = array())
     {
@@ -109,53 +96,21 @@ class Row implements \JsonSerializable, \ArrayAccess
     }
 
     /**
-     * Sleep
-     *
-     * @return array
+     * List of required for serialization properties
+     * @return string[]
      */
     public function __sleep()
     {
-        return array('primary', 'data', 'clean');
+        return array('primary', 'container', 'clean');
     }
 
     /**
-     * Set row field value
-     *
-     * @param  string $columnName The column key.
-     * @param  mixed $value      The value for the property.
-     * @return void
-     * @throws DbException
+     * Cast to string as class name
+     * @return string
      */
-    public function __set($columnName, $value)
+    public function __toString()
     {
-        if (strpos($columnName, '__') === 0) {
-            // it's just relation data
-            list($modelName, $columnName) = preg_split('/_/', substr($columnName, 2), 2);
-            if (!empty($modelName) && !empty($columnName)) {
-                if (!isset($this->relationsData[$modelName])) {
-                    $this->relationsData[$modelName] = array();
-                }
-                $this->relationsData[$modelName][$columnName] = $value;
-            }
-        } else {
-            $this->data[$columnName] = $value;
-        }
-    }
-
-    /**
-     * Retrieve row field value
-     *
-     * @param  string $columnName The user-specified column name.
-     * @return string             The corresponding column value.
-     * @throws DbException if the $columnName is not a column in the row.
-     */
-    public function __get($columnName)
-    {
-        if (isset($this->data[$columnName])) {
-            return $this->data[$columnName];
-        } else {
-            return null;
-        }
+        return get_called_class();
     }
 
     /**
@@ -188,8 +143,6 @@ class Row implements \JsonSerializable, \ArrayAccess
 
     /**
      * Insert row to Db
-     *
-     * @throws Exception\DbException
      * @return mixed The primary key value(s), as an associative array if the
      *     key is compound, or a scalar if the key is single-column.
      */
@@ -200,18 +153,21 @@ class Row implements \JsonSerializable, \ArrayAccess
          */
         $this->beforeInsert();
 
+        $data = $this->toArray();
+
+        /**
+         * Execute validator logic
+         * Can throw ValidatorException
+         */
+        if (method_exists($this, 'assert')) {
+            $this->assert($data);
+        }
+
+        $table = $this->getTable();
+
         /**
          * Execute the INSERT (this may throw an exception)
          */
-        $data = $this->toArray();
-
-        $table = $this->getTable();
-        $data = $table->filterColumns($data);
-
-        if (!sizeof($data)) {
-            throw new DbException("Columns data for table `{$table->getName()}` is missed");
-        }
-
         $primaryKey = $table->insert($data);
 
         /**
@@ -243,9 +199,7 @@ class Row implements \JsonSerializable, \ArrayAccess
 
     /**
      * Update row
-     *
-     * @return mixed The primary key value(s), as an associative array if the
-     *     key is compound, or a scalar if the key is single-column.
+     * @return integer The number of rows updated
      */
     protected function doUpdate()
     {
@@ -254,13 +208,23 @@ class Row implements \JsonSerializable, \ArrayAccess
          */
         $this->beforeUpdate();
 
+        $data = $this->toArray();
+
+        /**
+         * Execute validator logic
+         * Can throw ValidatorException
+         */
+        if (method_exists($this, 'assert')) {
+            $this->assert($data);
+        }
+
         $primaryKey = $this->getPrimaryKey();
 
         /**
          * Compare the data to the modified fields array to discover
          * which columns have been changed.
          */
-        $diffData = array_diff_assoc($this->toArray(), $this->clean);
+        $diffData = array_diff_assoc($data, $this->clean);
 
         $table = $this->getTable();
         $diffData = $table->filterColumns($diffData);
@@ -295,8 +259,7 @@ class Row implements \JsonSerializable, \ArrayAccess
 
     /**
      * Delete existing row
-     *
-     * @return int The number of rows deleted.
+     * @return integer The number of deleted rows
      */
     public function delete()
     {
@@ -321,15 +284,13 @@ class Row implements \JsonSerializable, \ArrayAccess
         /**
          * Reset all fields to null to indicate that the row is not there
          */
-        foreach ($this->data as &$value) {
-            $value = null;
-        }
+        $this->resetArray();
+
         return $result;
     }
 
     /**
      * Retrieves an associative array of primary keys, if it exists
-     *
      * @throws InvalidPrimaryKeyException
      * @return array
      */
@@ -361,7 +322,8 @@ class Row implements \JsonSerializable, \ArrayAccess
     }
 
     /**
-     * Before Insert/Update
+     * Allows pre-insert and pre-update logic to be applied to row.
+     * Subclasses may override this method.
      * @return void
      */
     protected function beforeSave()
@@ -369,7 +331,8 @@ class Row implements \JsonSerializable, \ArrayAccess
     }
 
     /**
-     * After Insert/Update
+     * Allows post-insert and post-update logic to be applied to row.
+     * Subclasses may override this method.
      * @return void
      */
     protected function afterSave()
@@ -377,7 +340,8 @@ class Row implements \JsonSerializable, \ArrayAccess
     }
 
     /**
-     * Pre insert hook
+     * Allows pre-insert logic to be applied to row.
+     * Subclasses may override this method.
      * @return void
      */
     protected function beforeInsert()
@@ -387,7 +351,6 @@ class Row implements \JsonSerializable, \ArrayAccess
     /**
      * Allows post-insert logic to be applied to row.
      * Subclasses may override this method.
-     *
      * @return void
      */
     protected function afterInsert()
@@ -395,7 +358,8 @@ class Row implements \JsonSerializable, \ArrayAccess
     }
 
     /**
-     * Pre update hook
+     * Allows pre-update logic to be applied to row.
+     * Subclasses may override this method.
      * @return void
      */
     protected function beforeUpdate()
@@ -405,7 +369,6 @@ class Row implements \JsonSerializable, \ArrayAccess
     /**
      * Allows post-update logic to be applied to row.
      * Subclasses may override this method.
-     *
      * @return void
      */
     protected function afterUpdate()
@@ -413,7 +376,8 @@ class Row implements \JsonSerializable, \ArrayAccess
     }
 
     /**
-     * Pre delete hook
+     * Allows pre-delete logic to be applied to row.
+     * Subclasses may override this method.
      * @return void
      */
     protected function beforeDelete()
@@ -423,7 +387,6 @@ class Row implements \JsonSerializable, \ArrayAccess
     /**
      * Allows post-delete logic to be applied to row.
      * Subclasses may override this method.
-     *
      * @return void
      */
     protected function afterDelete()
@@ -431,11 +394,20 @@ class Row implements \JsonSerializable, \ArrayAccess
     }
 
     /**
+     * Setup Table instance
+     * @param Table $table
+     * @return self
+     */
+    public function setTable(Table $table)
+    {
+        $this->table = $table;
+        return $this;
+    }
+
+    /**
      * Returns the table object, or null if this is disconnected row
-     *
      * @throws TableNotFoundException
-     * @throws DbException
-     * @return Table|null
+     * @return Table
      */
     public function getTable()
     {
@@ -443,151 +415,63 @@ class Row implements \JsonSerializable, \ArrayAccess
             return $this->table;
         }
 
-        if (is_string($this->table)) {
-            $classTable = $this->table;
+        if ($this->tableClass) {
+            $tableClass = $this->tableClass;
         } else {
             // try to guess table class
-            $classRow = get_class($this);
+            $rowClass = get_class($this);
             /**
-             * @var string $classTable is child of \Bluz\Db\Table
+             * @var string $tableClass is child of \Bluz\Db\Table
              */
-            $classTable = substr($classRow, 0, strrpos($classRow, '\\', 1) + 1) . 'Table';
+            $tableClass = substr($rowClass, 0, strrpos($rowClass, '\\', 1) + 1) . 'Table';
         }
 
-        try {
-            if (class_exists($classTable)) {
-                if ($table = call_user_func(array($classTable, 'getInstance'))) {
-                    $this->table = $table;
-                    return $this->table;
-                } else {
-                    throw new DbException('"' . $classTable . '" is invalid');
-                }
-            } else {
-                throw new DbException('"' . $classTable . '" not found');
-            }
-        } catch (\Exception $e) {
-            throw new TableNotFoundException('Can\'t find table class: ' . $e->getMessage());
+        // check class initialization
+        if (!class_exists($tableClass) or !is_subclass_of($tableClass, '\\Bluz\\Db\\Table')) {
+            throw new TableNotFoundException("`Table` class is not exists or not initialized");
         }
-    }
 
-    /**
-     * Get relation
-     *
-     * @param string $modelName
-     * @throws RelationNotFoundException
-     * @return \Bluz\Db\Row
-     */
-    public function getRelation($modelName)
-    {
-        if (isset($this->relations[$modelName])) {
-            return $this->relations[$modelName];
-        } elseif (!isset($this->relationsData[$modelName])) {
-            throw new RelationNotFoundException(
-                'Can\'t found relation data for model "' . $modelName . '"'
-            );
-        }
-        $currentClass = get_class($this);
-        $classRow = substr($currentClass, 0, strrpos($currentClass, '\\'));
-        $nameSpace = substr($currentClass, 0, strrpos($classRow, '\\'));
-        $classRow = $nameSpace . '\\' . $modelName . '\\Row';
+        /**
+         * @var Table $tableClass
+         */
+        $table = $tableClass::getInstance();
 
-        $this->relations[$modelName] = new $classRow($this->relationsData[$modelName]);
+        $this->setTable($table);
 
-        return $this->relations[$modelName];
+        return $table;
     }
 
     /**
      * Set relation
-     *
      * @param Row $row
      * @return Row
      */
     public function setRelation(Row $row)
     {
-        $class = get_class($row);
-        $this->relations[$class] = $row;
+        $tableName = $row->getTable()->getName();
+        $this->relations[$tableName] = [$row];
         return $this;
     }
 
     /**
-     * Implement JsonSerializable
-     *
-     * @return array
+     * Get relation by name
+     * @param string $tableName
+     * @throws RelationNotFoundException
+     * @return Row
      */
-    public function jsonSerialize()
+    public function getRelation($tableName)
     {
-        return $this->data;
-    }
-
-    /**
-     * Returns the column/value data as an array.
-     *
-     * @return array
-     */
-    public function toArray()
-    {
-        return $this->data;
-    }
-
-    /**
-     * Sets all data in the row from an array
-     *
-     * @param  array $data
-     * @return Row Provides a fluent interface
-     */
-    public function setFromArray(array $data)
-    {
-        foreach ($data as $columnName => $value) {
-            $this->$columnName = $value;
+        if (!isset($this->relations[$tableName])) {
+            $relation = Relations::findRelation($this, $tableName);
+            if (!$relation) {
+                throw new RelationNotFoundException(
+                    'Can\'t found relation data for model "' . $tableName . '"'
+                );
+            } else {
+                $this->relations[$tableName] = $relation;
+            }
         }
-        return $this;
-    }
 
-    /**
-     * {@inheritdoc}
-     *
-     * @param mixed $offset
-     * @param mixed $value
-     * @throws \InvalidArgumentException
-     */
-    public function offsetSet($offset, $value)
-    {
-        if (is_null($offset)) {
-            throw new \InvalidArgumentException('Class `Db\Row` not fully support `ArrayAccess`');
-        } else {
-            $this->__set($offset, $value);
-        }
-    }
-
-    /**
-     * {@inheritdoc}
-     *
-     * @param mixed $offset
-     * @return bool
-     */
-    public function offsetExists($offset)
-    {
-        return isset($this->data[$offset]);
-    }
-
-    /**
-     * {@inheritdoc}
-     *
-     * @param mixed $offset
-     */
-    public function offsetUnset($offset)
-    {
-        unset($this->data[$offset]);
-    }
-
-    /**
-     * {@inheritdoc}
-     *
-     * @param mixed $offset
-     * @return mixed|string
-     */
-    public function offsetGet($offset)
-    {
-        return $this->__get($offset);
+        return $this->relations[$tableName];
     }
 }

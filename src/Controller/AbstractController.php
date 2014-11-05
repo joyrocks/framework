@@ -13,7 +13,7 @@ namespace Bluz\Controller;
 
 use Bluz\Application\Exception\ApplicationException;
 use Bluz\Crud\AbstractCrud;
-use Bluz\Http\Request;
+use Bluz\Proxy\Request;
 
 /**
  * AbstractController
@@ -26,32 +26,27 @@ use Bluz\Http\Request;
 abstract class AbstractController
 {
     /**
-     * HTTP Method
-     * @var string
+     * @var string HTTP Method
      */
     protected $method = Request::METHOD_GET;
 
     /**
-     * Params of query
-     * @var array
+     * @var array Params of query
      */
     protected $params = array();
 
     /**
-     * Identifier
-     * @var string
+     * @var array Identifier
      */
     protected $primary;
 
     /**
-     * Query data
-     * @var array
+     * @var array Query data
      */
     protected $data = array();
 
     /**
-     * Instance of CRUD
-     * @var AbstractCrud
+     * @var AbstractCrud Instance of CRUD
      */
     protected $crud;
 
@@ -60,25 +55,22 @@ abstract class AbstractController
      */
     public function __construct()
     {
-        $request = app()->getRequest();
-
         // rewrite REST with "_method" param
         // this is workaround
-        $this->method = strtoupper($request->getParam('_method', $request->getMethod()));
+        $this->method = strtoupper(Request::getParam('_method', Request::getMethod()));
 
         // get all params
-        $query = $request->getQuery();
+        $query = Request::getQuery();
 
         unset($query['_method']);
 
         $this->params = $query;
 
-        $this->data = $request->getParams();
+        $this->data = Request::getParams();
     }
 
     /**
      * Controller should be executable
-     *
      * @return mixed
      */
     abstract public function __invoke();
@@ -86,7 +78,6 @@ abstract class AbstractController
     /**
      * Return HTTP request method
      * Can be rewrite by '_method' parameter
-     *
      * @return string
      */
     public function getMethod()
@@ -95,8 +86,7 @@ abstract class AbstractController
     }
 
     /**
-     * getData
-     *
+     * Get Data
      * @param string $field
      * @return array
      */
@@ -114,19 +104,29 @@ abstract class AbstractController
     }
 
     /**
+     * Setup Crud instance
+     * @param AbstractCrud $crud
+     * @return self
+     */
+    public function setCrud(AbstractCrud $crud)
+    {
+        $this->crud = $crud;
+        return $this;
+    }
+
+    /**
      * Get crud instance
-     *
      * @throws \Bluz\Application\Exception\ApplicationException
      * @return AbstractCrud
      */
     public function getCrud()
     {
         if (!$this->crud) {
-            $restClass = get_called_class();
-            $crudClass = substr($restClass, 0, strrpos($restClass, '\\', 1) + 1) . 'Crud';
+            $controllerClass = get_called_class();
+            $crudClass = substr($controllerClass, 0, strrpos($controllerClass, '\\', 1) + 1) . 'Crud';
 
             // check class initialization
-            if (!is_subclass_of($crudClass, '\Bluz\Crud\AbstractCrud')) {
+            if (!class_exists($crudClass) or !is_subclass_of($crudClass, '\\Bluz\\Crud\\AbstractCrud')) {
                 throw new ApplicationException("`Crud` class is not exists or not initialized");
             }
 
@@ -141,20 +141,7 @@ abstract class AbstractController
     }
 
     /**
-     * Setup Crud instance
-     *
-     * @param AbstractCrud $crud
-     * @return self
-     */
-    public function setCrud(AbstractCrud $crud)
-    {
-        $this->crud = $crud;
-        return $this;
-    }
-
-    /**
      * Get item by primary key(s)
-     *
      * @param mixed $primary
      * @return mixed
      */
@@ -165,7 +152,6 @@ abstract class AbstractController
 
     /**
      * List of items
-     *
      * @param int $offset
      * @param int $limit
      * @param array $params
@@ -178,7 +164,6 @@ abstract class AbstractController
 
     /**
      * Create new item
-     *
      * @param array $data
      * @return mixed
      */
@@ -189,7 +174,6 @@ abstract class AbstractController
 
     /**
      * Create items
-     *
      * @param array $data
      * @return mixed
      */
@@ -200,7 +184,6 @@ abstract class AbstractController
 
     /**
      * Update item
-     *
      * @param mixed $id
      * @param array $data
      * @return integer
@@ -212,7 +195,6 @@ abstract class AbstractController
 
     /**
      * Update items
-     *
      * @param array $data
      * @return integer
      */
@@ -223,7 +205,6 @@ abstract class AbstractController
 
     /**
      * Delete item
-     *
      * @param mixed $primary
      * @return integer
      */
@@ -234,7 +215,6 @@ abstract class AbstractController
 
     /**
      * Delete items
-     *
      * @param array $data
      * @return integer
      */

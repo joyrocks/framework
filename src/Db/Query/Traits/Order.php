@@ -11,6 +11,10 @@
  */
 namespace Bluz\Db\Query\Traits;
 
+use Bluz\Db\Query\Delete;
+use Bluz\Db\Query\Select;
+use Bluz\Db\Query\Update;
+
 /**
  * Order Trait, required for:
  *  - Select Builder
@@ -19,22 +23,25 @@ namespace Bluz\Db\Query\Traits;
  *
  * @package Bluz\Db\Query\Traits
  *
+ * @method Select|Update|Delete addQueryPart(string $sqlPartName, mixed $sqlPart, $append = false)
+ *
  * @author   Anton Shevchuk
  * @created  17.06.13 10:00
  */
-trait Order {
-
+trait Order
+{
     /**
      * Specifies an ordering for the query results
      * Replaces any previously specified orderings, if any
      *
      * @param string $sort expression
      * @param string $order direction
-     * @return $this
+     * @return Select|Update|Delete
      */
     public function orderBy($sort, $order = 'ASC')
     {
-        return $this->addQueryPart('orderBy', $sort . ' ' . (! $order ? 'ASC' : $order), false);
+        $order = strtoupper($order);
+        return $this->addQueryPart('orderBy', $sort .' '. ('ASC' == $order ? 'ASC' : 'DESC'), false);
     }
 
     /**
@@ -42,10 +49,11 @@ trait Order {
      *
      * @param string $sort expression
      * @param string $order direction
-     * @return $this
+     * @return Select|Update|Delete
      */
     public function addOrderBy($sort, $order = 'ASC')
     {
-        return $this->addQueryPart('orderBy', $sort . ' ' . (! $order ? 'ASC' : $order), true);
+        $order = strtoupper($order);
+        return $this->addQueryPart('orderBy', $sort .' '. ('ASC' == $order ? 'ASC' : 'DESC'), true);
     }
 }

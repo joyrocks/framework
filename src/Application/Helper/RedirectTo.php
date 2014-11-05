@@ -12,18 +12,18 @@
 namespace Bluz\Application\Helper;
 
 use Bluz\Application\Application;
+use Bluz\Proxy\Router;
 
 return
     /**
-     * redirect to controller
-     *
+     * Redirect to controller
+     * @var Application $this
      * @param string $module
      * @param string $controller
      * @param array $params
      * @return void
      */
     function ($module = 'index', $controller = 'index', $params = array()) {
-        /** @var Application $this */
-        $url = $this->getRouter()->url($module, $controller, $params);
+        $url = Router::getUrl($module, $controller, $params);
         $this->redirect($url);
     };

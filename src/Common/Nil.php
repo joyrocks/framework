@@ -16,6 +16,9 @@ namespace Bluz\Common;
  *
  * @package  Bluz\Common
  *
+ * @method null get($key)
+ * @method null set($key, $value)
+ *
  * @author   Anton Shevchuk
  * @created  15.01.13 09:50
  */
@@ -23,9 +26,8 @@ class Nil
 {
     /**
      * Magic call
-     *
-     * @param $method
-     * @param $args
+     * @param string $method
+     * @param array $args
      * @return null
      */
     public function __call($method, $args)
@@ -35,9 +37,8 @@ class Nil
 
     /**
      * Magic call for static
-     *
-     * @param $method
-     * @param $args
+     * @param string $method
+     * @param array $args
      * @return null
      */
     public static function __callStatic($method, $args)
@@ -46,9 +47,8 @@ class Nil
     }
 
     /**
-     * __get
-     *
-     * @param $key
+     * Magic __get
+     * @param string $key
      * @return null
      */
     public function __get($key)
@@ -57,10 +57,9 @@ class Nil
     }
 
     /**
-     * __set
-     *
-     * @param $key
-     * @param $value
+     * Magic __set
+     * @param string $key
+     * @param mixed $value
      * @return null
      */
     public function __set($key, $value)
@@ -69,8 +68,7 @@ class Nil
     }
 
     /**
-     * __toString
-     *
+     * Cast to empty string
      * @return string
      */
     public function __toString()

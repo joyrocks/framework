@@ -10,16 +10,16 @@
         "psr/log": "1.*"
     },
     "require-dev": {
-        "phpunit/phpunit": "3.7.9",
-        "squizlabs/php_codesniffer": "1.*",
-        "sebastian/phpcpd": "dev-master",
-        "pdepend/pdepend": "dev-master",
-        "phpmd/phpmd": "dev-master"
+        "phpunit/phpunit": "4.3.*",
+        "satooshi/php-coveralls": "dev-master",
+        "squizlabs/php_codesniffer": "1.*"
     },
     "suggest": {
         "ext-gettext": "required by Bluz\\Translator (https://github.com/bluzphp/framework/wiki/Translator)",
         "ext-redis": "required by Redis adapter for Bluz\\Cache (https://github.com/bluzphp/framework/wiki/Cache)",
-        "phpmailer/phpmailer": "required by Bluz\\Mailer (https://github.com/bluzphp/framework/wiki/Mailer)"
+        "ext-memcached": "required by Memcached adapter for Bluz\\Cache (https://github.com/bluzphp/framework/wiki/Cache)",
+        "phpmailer/phpmailer": "required by Bluz\\Mailer (https://github.com/bluzphp/framework/wiki/Mailer)",
+        "predis/predis": "required by Cache\\Adapter\\Predis (https://github.com/bluzphp/framework/wiki/Cache)"
     },
     "autoload": {
         "psr-4": {
@@ -33,18 +33,8 @@
     },
     "authors": [
         {
-            "name": "Anton Shevchuk",
-            "email": "AntonShevchuk@gmail.com"
-        },
-        {
-            "name": "Eugene Zabolotniy",
-            "email": "realbaziak@gmail.com"
-        },
-        {
-            "name": "Maks Slesarenko"
-        },
-        {
-            "name": "EagleMoor"
+            "name": "Bluz Framework Contributors",
+            "homepage": "https://github.com/bluzphp/framework/graphs/contributors"
         }
     ],
     "support": {

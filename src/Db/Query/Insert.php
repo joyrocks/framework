@@ -11,8 +11,10 @@
  */
 namespace Bluz\Db\Query;
 
+use Bluz\Proxy\Db;
+
 /**
- * Builder of SELECT queries
+ * Builder of INSERT queries
  *
  * @package Bluz\Db\Query
  */
@@ -24,23 +26,26 @@ class Insert extends AbstractBuilder
      * {@inheritdoc}
      *
      * @param null $sequence
-     * @return int|mixed|string
+     * @return mixed
      */
     public function execute($sequence = null)
     {
-        $result = $this->getAdapter()->query($this->getSQL(), $this->params, $this->paramTypes);
+        $result = Db::query($this->getSQL(), $this->params, $this->types);
         if ($result) {
-            return $this->getAdapter()->handler()->lastInsertId($sequence);
+            return Db::handler()->lastInsertId($sequence);
         }
         return $result;
     }
 
     /**
      * {@inheritdoc}
+     *
+     * @return string
      */
     public function getSql()
     {
-        $query = "INSERT INTO " . $this->sqlParts['from']['table']
+        $query = "INSERT"
+            . " INTO " . $this->sqlParts['from']['table']
             . " SET " . join(", ", $this->sqlParts['set']);
 
         return $query;
@@ -58,11 +63,10 @@ class Insert extends AbstractBuilder
      *         ->set('password', md5('password'));
      *
      * @param string $table The table into which the rows should be inserted
-     * @return self instance
+     * @return Insert instance
      */
     public function insert($table)
     {
-        $table = $this->getAdapter()->quoteIdentifier($table);
-        return $this->addQueryPart('from', array('table' => $table));
+        return $this->setFromQueryPart($table);
     }
 }

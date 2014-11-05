@@ -11,9 +11,7 @@
  */
 namespace Bluz\Crud;
 
-use Bluz\Request\AbstractRequest;
 use Bluz\Application\Exception\NotImplementedException;
-use Bluz\Translator\Translator;
 
 /**
  * Crud
@@ -26,19 +24,12 @@ use Bluz\Translator\Translator;
 abstract class AbstractCrud
 {
     /**
-     * Default limit for pagination
+     * Default limit for READ SET of elements
      */
     const DEFAULT_LIMIT = 10;
 
     /**
-     * Errors stack
-     * @var array
-     */
-    protected $errors = array();
-
-    /**
-     * getInstance
-     *
+     * Get CRUD Instance
      * @return static
      */
     public static function getInstance()
@@ -53,14 +44,12 @@ abstract class AbstractCrud
 
     /**
      * Return primary key signature
-     *
      * @return array
      */
     abstract public function getPrimaryKey();
 
     /**
-     * get item by primary key(s)
-     *
+     * Get item by primary key(s)
      * @param mixed $primary
      * @throws NotImplementedException
      * @return mixed
@@ -72,7 +61,6 @@ abstract class AbstractCrud
 
     /**
      * list of items
-     *
      * @param int $offset
      * @param int $limit
      * @param array $params
@@ -85,8 +73,7 @@ abstract class AbstractCrud
     }
 
     /**
-     * create new item
-     *
+     * Create new item
      * @param array $data
      * @throws NotImplementedException
      * @return mixed
@@ -97,8 +84,7 @@ abstract class AbstractCrud
     }
 
     /**
-     * create items
-     *
+     * Create items
      * @param array $data
      * @throws NotImplementedException
      * @return mixed
@@ -109,8 +95,7 @@ abstract class AbstractCrud
     }
 
     /**
-     * update item
-     *
+     * Update item
      * @param mixed $primary
      * @param array $data
      * @throws NotImplementedException
@@ -122,8 +107,7 @@ abstract class AbstractCrud
     }
 
     /**
-     * update items
-     *
+     * Update items
      * @param array $data
      * @throws NotImplementedException
      * @return integer
@@ -134,8 +118,7 @@ abstract class AbstractCrud
     }
 
     /**
-     * delete item
-     *
+     * Delete item
      * @param mixed $primary
      * @throws NotImplementedException
      * @return integer
@@ -146,8 +129,7 @@ abstract class AbstractCrud
     }
 
     /**
-     * delete items
-     *
+     * Delete items
      * @param array $data
      * @throws NotImplementedException
      * @return integer
@@ -155,87 +137,5 @@ abstract class AbstractCrud
     public function deleteSet($data)
     {
         throw new NotImplementedException();
-    }
-
-    /**
-     * validate
-     *
-     * @param null $primary
-     * @param array $data
-     * @return boolean
-     */
-    public function validate($primary, $data)
-    {
-        return !$this->hasErrors();
-    }
-
-    /**
-     * createValidation
-     *
-     * @param array $data
-     * @return boolean
-     */
-    public function validateCreate($data)
-    {
-        return !$this->hasErrors();
-    }
-
-    /**
-     * updateValidation
-     *
-     * @param mixed $primary
-     * @param array $data
-     * @return boolean
-     */
-    public function validateUpdate($primary, $data)
-    {
-        return !$this->hasErrors();
-    }
-
-    /**
-     * Add new errors to stack
-     *
-     * @param $message
-     * @param $field
-     * @return self
-     */
-    protected function addError($message, $field)
-    {
-        if (!isset($this->errors[$field])) {
-            $this->errors[$field] = array();
-        }
-        $this->errors[$field][] = Translator::translate($message);
-        return $this;
-    }
-
-    /**
-     * Get errors stack
-     *
-     * @return mixed
-     */
-    public function getErrors()
-    {
-        return $this->errors;
-    }
-
-    /**
-     * Has errors
-     *
-     * @return boolean
-     */
-    public function hasErrors()
-    {
-        return sizeof($this->errors);
-    }
-
-    /**
-     * Check errors stack and throw 
-     * @throws ValidationException
-     */
-    public function checkErrors()
-    {
-        if ($this->hasErrors()) {
-            throw new ValidationException('Your request contains error(s) please fix them before try again');
-        }
     }
 }

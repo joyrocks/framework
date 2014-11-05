@@ -11,9 +11,9 @@
  */
 namespace Bluz\Grid\Source;
 
-use Bluz\Application\Application;
 use Bluz\Db;
 use Bluz\Grid;
+use Bluz\Proxy;
 
 /**
  * SQL Source Adapter for Grid package
@@ -26,16 +26,21 @@ use Bluz\Grid;
 class SqlSource extends AbstractSource
 {
     /**
+     * @var string SQL
+     */
+    protected $source;
+
+    /**
      * setSource
      *
-     * @param $source
+     * @param string $source
      * @throws \Bluz\Grid\GridException
      * @return self
      */
     public function setSource($source)
     {
         if (!is_string($source)) {
-            throw new Grid\GridException("Source of SqlSource should be string with SQL query");
+            throw new Grid\GridException("Source of `SqlSource` should be string with SQL query");
         }
         $this->source = $source;
 
@@ -60,7 +65,7 @@ class SqlSource extends AbstractSource
                     }
                     $where[] = $column .' '.
                         $this->filters[$filter].' '.
-                        Db\Db::getDefaultAdapter()->quote($value);
+                        Proxy\Db::quote($value);
                 }
             }
         }
@@ -70,7 +75,7 @@ class SqlSource extends AbstractSource
         if (!empty($settings['orders'])) {
             // Obtain a list of columns
             foreach ($settings['orders'] as $column => $order) {
-                $column = Db\Db::getDefaultAdapter()->quoteIdentifier($column);
+                $column = Proxy\Db::quoteIdentifier($column);
                 $orders[] = $column . ' ' . $order;
             }
         }
@@ -79,7 +84,7 @@ class SqlSource extends AbstractSource
         $limit = ' LIMIT ' . ($settings['page'] - 1) * $settings['limit'] . ', ' . $settings['limit'];
 
         // prepare query
-        $connect = Application::getInstance()->getConfigData('db', 'connect');
+        $connect = Proxy\Config::getData('db', 'connect');
         if (strtolower($connect['type']) == 'mysql') { // MySQL
             $dataSql = preg_replace('/SELECT\s(.*?)\sFROM/is', 'SELECT SQL_CALC_FOUND_ROWS $1 FROM', $this->source, 1);
             $countSql = 'SELECT FOUND_ROWS()';
@@ -100,8 +105,8 @@ class SqlSource extends AbstractSource
         $dataSql .= $limit;
 
         // run queries
-        $data = Db\Db::getDefaultAdapter()->fetchAll($dataSql);
-        $total = Db\Db::getDefaultAdapter()->fetchOne($countSql);
+        $data = Proxy\Db::fetchAll($dataSql);
+        $total = Proxy\Db::fetchOne($countSql);
         $gridData = new Grid\Data($data);
         $gridData->setTotal($total);
         return $gridData;

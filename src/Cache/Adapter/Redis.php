@@ -12,12 +12,13 @@
 namespace Bluz\Cache\Adapter;
 
 use Bluz\Cache\Cache;
-use Bluz\Cache\CacheException;
+use Bluz\Common\Exception\ComponentException;
+use Bluz\Common\Exception\ConfigurationException;
 
 /**
  * Redis cache adapter
  * @package Bluz\Cache\Adapter
- * @author The-Who
+ * @author  The-Who
  */
 class Redis extends AbstractAdapter
 {
@@ -25,7 +26,7 @@ class Redis extends AbstractAdapter
      * Instance of Redis
      * @var \Redis
      */
-    protected $redis = null;
+    protected $handler = null;
 
     /**
      * Default Redis settings
@@ -34,8 +35,8 @@ class Redis extends AbstractAdapter
     protected $settings = array(
         'host' => '127.0.0.1',
         'port' => '6379',
-        'timeout' => null,
-        'persistence' => false,
+        'timeout' => 5.0,
+        'connection_persistent' => false,
         'options' => array(
             \Redis::OPT_SERIALIZER => \Redis::SERIALIZER_PHP
         )
@@ -45,22 +46,24 @@ class Redis extends AbstractAdapter
      * Check and setup Redis server
      *
      * @param array $settings
-     * @throws \Bluz\Cache\CacheException
+     * @throws ComponentException
+     * @throws ConfigurationException
      */
     public function __construct($settings = array())
     {
+        // check Redis extension
         if (!extension_loaded('redis')) {
-            $msg = "Redis extension not installed/enabled.
-                    Install and/or enable Redis extension [http://pecl.php.net/package/redis].
-                    See phpinfo() for more information";
-            throw new CacheException($msg);
+            throw new ComponentException(
+                "Redis extension not installed/enabled.
+                Install and/or enable Redis extension [http://pecl.php.net/package/redis].
+                See phpinfo() for more information"
+            );
         }
 
-        // Check settings
+        // check Redis settings
         if (!is_array($settings) or empty($settings)) {
-            throw new CacheException(
-                "Redis configuration is missed.
-                Please check 'cache' configuration section"
+            throw new ConfigurationException(
+                "Redis configuration is missed. Please check 'cache' configuration section"
             );
         }
 
@@ -74,20 +77,20 @@ class Redis extends AbstractAdapter
      */
     public function getHandler()
     {
-        if (!$this->redis) {
-            $this->redis = new \Redis();
-            if ($this->settings['persistence']) {
-                $this->redis->pconnect($this->settings['host'], $this->settings['port'], $this->settings['timeout']);
+        if (!$this->handler) {
+            $this->handler = new \Redis();
+            if ($this->settings['connection_persistent']) {
+                $this->handler->pconnect($this->settings['host'], $this->settings['port'], $this->settings['timeout']);
             } else {
-                $this->redis->connect($this->settings['host'], $this->settings['port'], $this->settings['timeout']);
+                $this->handler->connect($this->settings['host'], $this->settings['port'], $this->settings['timeout']);
             }
             if (isset($this->settings['options'])) {
                 foreach ($this->settings['options'] as $key => $value) {
-                    $this->redis->setOption($key, $value);
+                    $this->handler->setOption($key, $value);
                 }
             }
         }
-        return $this->redis;
+        return $this->handler;
     }
 
     /**
@@ -107,16 +110,12 @@ class Redis extends AbstractAdapter
      * @param string $id
      * @param mixed $data
      * @param int $ttl
-     * @return bool|mixed
+     * @return bool
      */
     protected function doAdd($id, $data, $ttl = Cache::TTL_NO_EXPIRY)
     {
         if (!$this->doContains($id)) {
-            if (Cache::TTL_NO_EXPIRY == $ttl) {
-                return $this->getHandler()->set($id, $data);
-            } else {
-                return $this->getHandler()->setex($id, $ttl, $data);
-            }
+            $this->doSet($id, $data, $ttl);
         }
         return false;
     }
@@ -127,7 +126,7 @@ class Redis extends AbstractAdapter
      * @param string $id
      * @param mixed $data
      * @param int $ttl
-     * @return bool|mixed
+     * @return bool
      */
     protected function doSet($id, $data, $ttl = Cache::TTL_NO_EXPIRY)
     {
@@ -142,7 +141,7 @@ class Redis extends AbstractAdapter
      * {@inheritdoc}
      *
      * @param string $id
-     * @return bool|mixed
+     * @return bool
      */
     protected function doContains($id)
     {
@@ -153,11 +152,11 @@ class Redis extends AbstractAdapter
      * {@inheritdoc}
      *
      * @param string $id
-     * @return void
+     * @return int Number of keys deleted.
      */
     protected function doDelete($id)
     {
-        $this->getHandler()->delete($id);
+        return $this->getHandler()->del($id);
     }
 
     /**

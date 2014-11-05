@@ -12,28 +12,28 @@
 namespace Bluz\Cache\Adapter;
 
 use Bluz\Cache\Cache;
-use Bluz\Cache\CacheException;
+use Bluz\Common\Exception\ComponentException;
 
 /**
  * APC cache adapter
  *
  * @package Bluz\Cache\Adapter
- * @author murzik
+ * @author  murzik
  */
 class Apc extends AbstractAdapter
 {
     /**
-     * Check extension inside
+     * Check APC extension
      *
      * @param array $settings
-     * @throws \Bluz\Cache\CacheException
+     * @throws ComponentException
      */
     public function __construct($settings = array())
     {
         if (!extension_loaded('apc')) {
             $msg = "APC extension not installed/enabled.
                     Install and/or enable APC extension. See phpinfo() for more information";
-            throw new CacheException($msg);
+            throw new ComponentException($msg);
         }
     }
 
@@ -54,7 +54,7 @@ class Apc extends AbstractAdapter
      * @param string $id
      * @param mixed $data
      * @param int $ttl
-     * @return bool|mixed
+     * @return bool
      */
     protected function doAdd($id, $data, $ttl = Cache::TTL_NO_EXPIRY)
     {
@@ -67,7 +67,7 @@ class Apc extends AbstractAdapter
      * @param string $id
      * @param mixed $data
      * @param int $ttl
-     * @return array|bool|mixed
+     * @return bool
      */
     protected function doSet($id, $data, $ttl = Cache::TTL_NO_EXPIRY)
     {
@@ -78,7 +78,7 @@ class Apc extends AbstractAdapter
      * {@inheritdoc}
      *
      * @param string $id
-     * @return bool|mixed|\string[]
+     * @return bool|string[]
      */
     protected function doContains($id)
     {
@@ -89,7 +89,7 @@ class Apc extends AbstractAdapter
      * {@inheritdoc}
      *
      * @param string $id
-     * @return bool|mixed|\string[]
+     * @return bool|string[]
      */
     protected function doDelete($id)
     {
@@ -99,7 +99,7 @@ class Apc extends AbstractAdapter
     /**
      * {@inheritdoc}
      *
-     * @return bool|mixed
+     * @return bool
      */
     protected function doFlush()
     {

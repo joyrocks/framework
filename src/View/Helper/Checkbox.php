@@ -15,28 +15,31 @@ use Bluz\View\View;
 
 return
     /**
+     * Generate HTML for <input type="checkbox">
+     *
      * @author The-Who
      *
+     * @var View $this
      * @param string $name
      * @param string|null $value
      * @param bool $checked
      * @param array $attributes
-     * @return \Closure
+     * @return string
      */
     function ($name, $value = null, $checked = false, array $attributes = []) {
-    /** @var View $this */
-    if (true === $checked) {
-        $attributes['checked'] = 'checked';
-    } elseif (false !== $checked && ($checked == $value)) {
-        $attributes['checked'] = 'checked';
-    }
+        /** @var View $this */
+        if (true === $checked) {
+            $attributes['checked'] = 'checked';
+        } elseif (false !== $checked && ($checked == $value)) {
+            $attributes['checked'] = 'checked';
+        }
 
-    if (null !== $value) {
-        $attributes['value'] = $value;
-    }
+        if (null !== $value) {
+            $attributes['value'] = $value;
+        }
 
-    $attributes['name'] = $name;
-    $attributes['type'] = 'checkbox';
+        $attributes['name'] = $name;
+        $attributes['type'] = 'checkbox';
 
-    return '<input ' . $this->attributes($attributes) . '/>';
+        return '<input ' . $this->attributes($attributes) . '/>';
     };

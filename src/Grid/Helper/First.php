@@ -11,7 +11,6 @@
  */
 namespace Bluz\Grid\Helper;
 
-use Bluz\Application\Application;
 use Bluz\Grid;
 
 return
@@ -19,8 +18,8 @@ return
      * @return string
      */
     function () {
-    /**
-     * @var Grid\Grid $this
-     */
-    return $this->getUrl(['page' => 1]);
+        /**
+         * @var Grid\Grid $this
+         */
+        return $this->getUrl(['page' => 1]);
     };

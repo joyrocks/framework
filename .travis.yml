@@ -2,6 +2,11 @@ language: php
 php:
   - 5.4
   - 5.5
+  - 5.6
+  - hhvm
+matrix:
+  allow_failures:
+    - php: hhvm
 before_script:
   # Composer
   - COMPOSER_ROOT_VERSION=dev-master composer --prefer-source --dev install
@@ -11,14 +16,17 @@ before_script:
   - mysql -e 'CREATE DATABASE bluz;'
   - mysql -uroot bluz < tests/dump.sql
 script:
-  # PHPUnit tests
-  - php vendor/bin/phpunit --configuration tests/phpunit.xml.dist --coverage-text
   - mkdir .reports
+  - chmod a+w ./tests/cache
   # Code style
-  - php vendor/bin/phpcs ./src --standard=PSR1
-  - php vendor/bin/phpcs ./src --standard=PSR2
+  - php vendor/bin/phpcs ./src --standard=PSR1 --encoding=utf-8
+  - php vendor/bin/phpcs ./src --standard=PSR2 --encoding=utf-8
+  - php vendor/bin/phpcs ./tests/src --standard=PSR1 --encoding=utf-8 --ignore=./tests/src/Common/Fixtures,./tests/src/Fixtures
+  - php vendor/bin/phpcs ./tests/src --standard=PSR2 --encoding=utf-8 --ignore=./tests/src/Common/Fixtures,./tests/src/Fixtures
+  # PHPUnit tests
+  - php vendor/bin/phpunit --configuration ./phpunit.xml.dist --coverage-clover=.reports/clover.xml
   # Duplicate code
-  - php vendor/bin/phpcpd --log-pmd .reports/pmd-cpd.xml src
+  #- php vendor/bin/phpcpd --log-pmd .reports/pmd-cpd.xml src
   # Lines of code
   #- php vendor/bin/phploc --log-csv .reports/phploc.csv src
   # works incorrect with latest PHP versions
@@ -26,5 +34,9 @@ script:
   #- php vendor/bin/pdepend --jdepend-xml=.reports/jdepend.xml --jdepend-chart=.reports/dependencies.svg --overview-pyramid=.reports/pyramid.svg  ./src
   # Mess detection
   #- php vendor/bin/phpmd ./src text codesize,unusedcode,naming
+after_script:
+  - php vendor/bin/coveralls -v
+  - wget https://scrutinizer-ci.com/ocular.phar
+  - php ocular.phar code-coverage:upload --format=php-clover .reports/clover.xml
 notifications:
   email: false

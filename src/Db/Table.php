@@ -13,6 +13,8 @@ namespace Bluz\Db;
 
 use Bluz\Db\Exception\DbException;
 use Bluz\Db\Exception\InvalidPrimaryKeyException;
+use Bluz\Proxy\Cache;
+use Bluz\Proxy\Db as DbProxy;
 
 /**
  * Table
@@ -38,52 +40,38 @@ use Bluz\Db\Exception\InvalidPrimaryKeyException;
 abstract class Table
 {
     /**
-     * The table name
-     * @var string
+     * @var string The table name
      */
-    protected $table = null;
+    protected $table;
 
     /**
-     * Table columns
-     * @var array
+     * @var array Table columns
      */
     protected $columns = [];
 
     /**
-     * Default SQL query for select
-     * @var string
+     * @var string Default SQL query for select
      */
     protected $select = "";
 
     /**
-     * The primary key column or columns.
-     * Should be declared as an array
-     * @var array
+     * @var array The primary key column or columns (only as array).
      */
     protected $primary;
 
     /**
-     * The sequence name, required for PostgreSQL
-     * @var string
+     * @var string The sequence name, required for PostgreSQL
      */
     protected $sequence;
 
     /**
-     * Db default adapter
-     * @var Db
-     */
-    protected $adapter = null;
-
-    /**
-     * Class name
-     * @var string
+     * @var string Row class name
      */
     protected $rowClass;
 
     /**
-     * __construct
-     *
-     * @return \Bluz\Db\Table
+     * Create and initialize Table instance
+     * @return Table
      */
     private function __construct()
     {
@@ -106,22 +94,23 @@ abstract class Table
 
         // setup default select query
         if (empty($this->select)) {
-            $this->select = "SELECT * FROM ". $this->table;
+            $this->select = "SELECT * ".
+                "FROM " . DbProxy::quoteIdentifier($this->table);
         }
 
         $this->init();
     }
 
     /**
-     * Init
+     * Initialization hook.
+     * Subclasses may override this method.
      */
     public function init()
     {
     }
 
     /**
-     * getInstance
-     *
+     * Get Table instance
      * @return static
      */
     public static function getInstance()
@@ -135,39 +124,7 @@ abstract class Table
     }
 
     /**
-     * Sets a DB adapter.
-     *
-     * @param Db $adapter DB adapter for table to use
-     * @return Table
-     * @throws DbException if default DB adapter not initiated
-     *                     on \Bluz\Db::$adapter.
-     */
-    public function setAdapter($adapter = null)
-    {
-        if (null == $adapter) {
-            $this->adapter = Db::getDefaultAdapter();
-        } else {
-            $this->adapter = $adapter;
-        }
-        return $this;
-    }
-
-    /**
-     * Gets a DB adapter.
-     *
-     * @return Db
-     */
-    public function getAdapter()
-    {
-        if (!$this->adapter) {
-            $this->setAdapter();
-        }
-        return $this->adapter;
-    }
-
-    /**
-     * set select query
-     *
+     * Set select query
      * @param $select
      * @return Table
      */
@@ -178,9 +135,8 @@ abstract class Table
     }
 
     /**
-     * get select query
-     *
-     * @return Table
+     * Get select query
+     * @return string
      */
     public function getSelectQuery()
     {
@@ -188,10 +144,8 @@ abstract class Table
     }
 
     /**
-     * get primary key(s)
-     *
-     * @throws InvalidPrimaryKeyException if primary key was not set or has
-     *                                    wrong format
+     * Get primary key(s)
+     * @throws InvalidPrimaryKeyException if primary key was not set or has wrong format
      * @return array
      */
     public function getPrimaryKey()
@@ -203,8 +157,7 @@ abstract class Table
     }
 
     /**
-     * getTable
-     *
+     * Get table name
      * @return string
      */
     public function getName()
@@ -214,26 +167,25 @@ abstract class Table
 
     /**
      * Return information about tables columns
-     *
      * @return array
      */
     public function getColumns()
     {
         if (empty($this->columns)) {
-            $columns = app()->getCache()->get('table:columns:'. $this->table);
+            $columns = Cache::get('table:columns:'. $this->table);
             if (!$columns) {
-                $connect = $this->getAdapter()->getOption('connect');
+                $connect = DbProxy::getOption('connect');
 
-                $columns = $this->getAdapter()->fetchColumn(
+                $columns = DbProxy::fetchColumn(
                     '
-                    SELECT `column_name`
+                    SELECT COLUMN_NAME
                     FROM INFORMATION_SCHEMA.COLUMNS
-                    WHERE `table_schema` = ?
-                      AND `table_name` = ?',
+                    WHERE TABLE_SCHEMA = ?
+                      AND TABLE_NAME = ?',
                     [$connect['name'], $this->getName()]
                 );
-                app()->getCache()->set('table:columns:'. $this->table, $columns);
-                app()->getCache()->addTag('table:columns:'. $this->table, 'db');
+                Cache::set('table:columns:'. $this->table, $columns);
+                Cache::addTag('table:columns:'. $this->table, 'db');
             }
             $this->columns = $columns;
 
@@ -243,7 +195,6 @@ abstract class Table
 
     /**
      * Filter columns for insert/update queries by table columns definition
-     *
      * @param $data
      * @return array
      */
@@ -255,7 +206,6 @@ abstract class Table
 
     /**
      * Fetching rows by SQL query
-     *
      * @param  string $sql query options.
      * @param  array $params
      * @return array of rows results in FETCH_CLASS mode
@@ -263,7 +213,7 @@ abstract class Table
     public static function fetch($sql, $params = array())
     {
         $self = static::getInstance();
-        return $self->getAdapter()->fetchObjects($sql, $params, $self->rowClass);
+        return DbProxy::fetchObjects($sql, $params, $self->rowClass);
     }
 
     /**
@@ -275,7 +225,7 @@ abstract class Table
     public static function fetchAll()
     {
         $self = static::getInstance();
-        return $self->getAdapter()->fetchObjects($self->select, [], $self->rowClass);
+        return DbProxy::fetchObjects($self->select, [], $self->rowClass);
     }
 
     /**
@@ -291,23 +241,19 @@ abstract class Table
      *
      * The find() method always returns a array
      *
-     * <pre>
-     * <code>
-     * // row by primary key
-     * // return array
-     * Table::find(123);
-     * // row by compound primary key
-     * // return array
-     * Table::find([123, 'abc']);
+     * Row by primary key, return array
+     *     Table::find(123);
      *
-     * // multiple rows by primary key
-     * Table::find(123, 234, 345);
-     * // multiple rows by compound primary key
-     * Table::find([123, 'abc'], [234, 'def'], [345, 'ghi'])
-     * </code>
-     * </pre>
+     * Row by compound primary key, return array
+     *     Table::find([123, 'abc']);
      *
-     * @internal param mixed $key The value(s) of the primary keys.
+     * Multiple rows by primary key
+     *     Table::find(123, 234, 345);
+     *
+     * Multiple rows by compound primary key
+     *     Table::find([123, 'abc'], [234, 'def'], [345, 'ghi'])
+     *
+     * @param mixed $key,... The value(s) of the primary keys.
      * @throws InvalidPrimaryKeyException if wrong count of values passed
      * @return array
      */
@@ -323,7 +269,7 @@ abstract class Table
             if (count($keyValues) < count($keyNames)) {
                 throw new InvalidPrimaryKeyException(
                     "Too few columns for the primary key.\n" .
-                    "Please check " . get_class($self) . " initialization or usage.\n" .
+                    "Please check " . get_called_class() . " initialization or usage.\n" .
                     "Settings described at https://github.com/bluzphp/framework/wiki/Db-Table"
                 );
             }
@@ -331,7 +277,7 @@ abstract class Table
             if (count($keyValues) > count($keyNames)) {
                 throw new InvalidPrimaryKeyException(
                     "Too many columns for the primary key.\n" .
-                    "Please check " . get_class($self) . " initialization or usage.\n" .
+                    "Please check " . get_called_class() . " initialization or usage.\n" .
                     "Settings described at https://github.com/bluzphp/framework/wiki/Db-Table"
                 );
             }
@@ -348,9 +294,7 @@ abstract class Table
     }
 
     /**
-     * Find row
-     *
-     * @todo add LIMIT 1 for retrieve only one row
+     * Find row by primary key
      * @param mixed $primaryKey
      * @return Row
      */
@@ -362,6 +306,98 @@ abstract class Table
         $self = static::getInstance();
         $result = call_user_func(array($self, 'find'), $primaryKey);
         return current($result);
+    }
+
+    /**
+     * Find rows by WHERE
+     *     // WHERE alias = 'foo'
+     *     Table::findWhere(['alias'=>'foo']);
+     *     // WHERE alias = 'foo' OR 'alias' = 'bar'
+     *     Table::findWhere(['alias'=>'foo'], ['alias'=>'bar']);
+     *     // WHERE (alias = 'foo' AND userId = 2) OR ('alias' = 'bar' AND userId = 4)
+     *     Table::findWhere(['alias'=>'foo', 'userId'=> 2], ['alias'=>'foo', 'userId'=>4]);
+     *     // WHERE alias IN ('foo', 'bar')
+     *     Table::findWhere(['alias'=> ['foo', 'bar']]);
+     *
+     * @throws \InvalidArgumentException
+     * @throws Exception\DbException
+     * @return array
+     */
+    public static function findWhere()
+    {
+        $self = static::getInstance();
+        $whereList = func_get_args();
+
+        $whereClause = null;
+        $whereParams = array();
+
+        if (sizeof($whereList) == 2 && is_string($whereList[0])) {
+            $whereClause = $whereList[0];
+            $whereParams = (array)$whereList[1];
+        } elseif (sizeof($whereList)) {
+            $whereOrTerms = array();
+            foreach ($whereList as $keyValueSets) {
+                $whereAndTerms = array();
+                foreach ($keyValueSets as $keyName => $keyValue) {
+                    if (is_array($keyValue)) {
+                        $keyValue = array_map(
+                            function ($value) use ($self) {
+                                return DbProxy::quote($value);
+                            },
+                            $keyValue
+                        );
+                        $keyValue = join(',', $keyValue);
+                        $whereAndTerms[] = $self->table . '.' . $keyName . ' IN ('.$keyValue.')';
+                    } elseif (is_null($keyValue)) {
+                        $whereAndTerms[] = $self->table . '.' . $keyName . ' IS NULL';
+                    } else {
+                        $whereAndTerms[] = $self->table . '.' . $keyName . ' = ?';
+                        $whereParams[] = $keyValue;
+                    }
+                    if (!is_scalar($keyValue) && !is_null($keyValue)) {
+                        throw new \InvalidArgumentException(
+                            "Wrong arguments of method 'findWhere'.\n" .
+                            "Please use syntax described at https://github.com/bluzphp/framework/wiki/Db-Table"
+                        );
+                    }
+                }
+                $whereOrTerms[] = '(' . implode(' AND ', $whereAndTerms) . ')';
+            }
+            $whereClause = '(' . implode(' OR ', $whereOrTerms) . ')';
+        } elseif (!sizeof($whereList)) {
+            throw new DbException(
+                "Method `Table::findWhere()` can't return all records from table,\n".
+                "please use `Table::fetchAll()` instead"
+            );
+        }
+        return $self->fetch($self->select . ' WHERE ' . $whereClause, $whereParams);
+    }
+
+    /**
+     * Find row by where condition
+     * @param array $whereList
+     * @return Row
+     */
+    public static function findRowWhere($whereList)
+    {
+        $self = static::getInstance();
+        $result = call_user_func(array($self, 'findWhere'), $whereList);
+        return current($result);
+    }
+
+    /**
+     * Prepare array for WHERE or SET statements
+     * @param $where
+     * @throws \Bluz\Common\Exception\ConfigurationException
+     * @return array
+     */
+    private static function prepareStatement($where)
+    {
+        $keys = array_keys($where);
+        foreach ($keys as &$key) {
+            $key = DbProxy::quoteIdentifier($key) . ' = ?';
+        }
+        return $keys;
     }
 
     /**
@@ -396,94 +432,16 @@ abstract class Table
     }
 
     /**
-     * Find rows by WHERE
-     *     // WHERE alias = 'foo'
-     *     Table::findWhere(['alias'=>'foo']);
-     *     // WHERE alias = 'foo' OR 'alias' = 'bar'
-     *     Table::findWhere(['alias'=>'foo'], ['alias'=>'bar']);
-     *     // WHERE (alias = 'foo' AND userId = 2) OR ('alias' = 'bar' AND userId = 4)
-     *     Table::findWhere(['alias'=>'foo', 'userId'=> 2], ['alias'=>'foo', 'userId'=>4]);
-     *     // WHERE alias IN ('foo', 'bar')
-     *     Table::findWhere(['alias'=> ['foo', 'bar']]);
-     *
-     * @throws \InvalidArgumentException
-     * @throws Exception\DbException
-     * @return array
-     */
-    public static function findWhere()
-    {
-        $self = static::getInstance();
-        $whereList = func_get_args();
-
-        $whereClause = null;
-        $whereParams = array();
-
-        if (sizeof($whereList) == 2 && is_string($whereList[0])) {
-            $whereClause = $whereList[0];
-            $whereParams = $whereList[1];
-        } elseif (sizeof($whereList)) {
-            $whereOrTerms = array();
-            foreach ($whereList as $keyValueSets) {
-                $whereAndTerms = array();
-                foreach ($keyValueSets as $keyName => $keyValue) {
-                    if (is_array($keyValue)) {
-                        $keyValue = array_map(
-                            function ($value) use ($self) {
-                                return $self->getAdapter()->quote($value);
-                            },
-                            $keyValue
-                        );
-                        $keyValue = join(',', $keyValue);
-                        $whereAndTerms[] = $self->table . '.' . $keyName . ' IN ('.$keyValue.')';
-                    } elseif (is_null($keyValue)) {
-                        $whereAndTerms[] = $self->table . '.' . $keyName . ' IS NULL';
-                    } else {
-                        $whereAndTerms[] = $self->table . '.' . $keyName . ' = ?';
-                        $whereParams[] = $keyValue;
-                    }
-                    if (!is_scalar($keyValue) && !is_null($keyValue)) {
-                        throw new \InvalidArgumentException(
-                            "Wrong arguments of method 'findWhere'.\n" .
-                            "Please use syntax described at https://github.com/bluzphp/framework/wiki/Db-Table"
-                        );
-                    }
-                }
-                $whereOrTerms[] = '(' . implode(' AND ', $whereAndTerms) . ')';
-            }
-            $whereClause = '(' . implode(' OR ', $whereOrTerms) . ')';
-        } elseif (!sizeof($whereList)) {
-            throw new DbException(
-                "Method `Table::findWhere()` can't return all records from table,\n".
-                "please use `Table::fetchAll()` instead"
-            );
-        }
-        return $self->fetch($self->select . ' WHERE ' . $whereClause, $whereParams);
-    }
-
-    /**
-     * Find row by where condition
-     *
-     * @todo add LIMIT 1 for retrieve only one row
-     * @param array $whereList
-     * @return Row
-     */
-    public static function findRowWhere($whereList)
-    {
-        $self = static::getInstance();
-        $result = call_user_func(array($self, 'findWhere'), $whereList);
-        return current($result);
-    }
-
-    /**
      * Create Row instance
-     *
      * @param array $data
      * @return Row
      */
     public static function create(array $data = [])
     {
         $rowClass = static::getInstance()->rowClass;
+        /** @var Row $row */
         $row = new $rowClass($data);
+        $row->setTable(static::getInstance());
         return $row;
     }
 
@@ -494,7 +452,7 @@ abstract class Table
      *
      * @param  array $data Column-value pairs
      * @throws Exception\DbException
-     * @return mixed Primary key or null
+     * @return string|null Primary key or null
      */
     public static function insert(array $data)
     {
@@ -508,8 +466,10 @@ abstract class Table
             );
         }
 
-        $sql = "INSERT INTO `{$self->table}` SET `" . join('` = ?,`', array_keys($data)) . "` = ?";
-        $result = $self->getAdapter()->query($sql, array_values($data));
+        $table = DbProxy::quoteIdentifier($self->table);
+
+        $sql = "INSERT INTO $table SET " . join(',', static::prepareStatement($data));
+        $result = DbProxy::query($sql, array_values($data));
         if (!$result) {
             return null;
         }
@@ -523,7 +483,7 @@ abstract class Table
          *
          * If the PDO driver does not support this capability, PDO::lastInsertId() triggers an IM001 SQLSTATE.
          */
-        return $self->getAdapter()->handler()->lastInsertId($self->sequence);
+        return DbProxy::handler()->lastInsertId($self->sequence);
     }
 
     /**
@@ -557,11 +517,13 @@ abstract class Table
             );
         }
 
-        $sql = "UPDATE `{$self->table}`"
-            . " SET `" . join('` = ?,`', array_keys($data)) . "` = ?"
-            . " WHERE `" . join('` = ? AND `', array_keys($where)) . "` = ?";
+        $table = DbProxy::quoteIdentifier($self->table);
 
-        return $self->getAdapter()->query($sql, array_merge(array_values($data), array_values($where)));
+        $sql = "UPDATE $table"
+            . " SET " . join(',', static::prepareStatement($data))
+            . " WHERE " . join(' AND ', static::prepareStatement($where));
+
+        return DbProxy::query($sql, array_merge(array_values($data), array_values($where)));
     }
 
     /**
@@ -592,8 +554,10 @@ abstract class Table
             );
         }
 
-        $sql = "DELETE FROM `{$self->table}`"
-            . " WHERE `" . join('` = ? AND `', array_keys($where)) . "` = ?";
-        return $self->getAdapter()->query($sql, array_values($where));
+        $table = DbProxy::quoteIdentifier($self->table);
+
+        $sql = "DELETE FROM $table"
+            . " WHERE " . join(' AND ', static::prepareStatement($where));
+        return DbProxy::query($sql, array_values($where));
     }
 }

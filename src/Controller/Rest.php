@@ -11,12 +11,13 @@
  */
 namespace Bluz\Controller;
 
-use Bluz\Application\Exception\ApplicationException;
 use Bluz\Application\Exception\BadRequestException;
 use Bluz\Application\Exception\NotFoundException;
 use Bluz\Application\Exception\NotImplementedException;
-use Bluz\Crud\ValidationException;
-use Bluz\Http\Request;
+use Bluz\Proxy\Response;
+use Bluz\Proxy\Request;
+use Bluz\Proxy\Router;
+use Bluz\Validator\Exception\ValidatorException;
 
 /**
  * Controller
@@ -29,26 +30,22 @@ use Bluz\Http\Request;
 class Rest extends AbstractController
 {
     /**
-     * Relation list
-     * @var string
+     * @var string Relation list
      */
     protected $relation;
 
     /**
-     * Relation Id
-     * @var string
+     * @var string Relation Id
      */
     protected $relationId;
 
     /**
-     * Params of query
-     * @var array
+     * @var array Params of query
      */
     protected $params = array();
 
     /**
-     * Query data
-     * @var array
+     * @var array Query data
      */
     protected $data = array();
 
@@ -59,9 +56,7 @@ class Rest extends AbstractController
     {
         parent::__construct();
 
-        $request = app()->getRequest();
-
-        $params = $request->getRawParams();
+        $params = Request::getRawParams();
 
         // %module% / %controller% / %id% / %relation% / %id%
         if (sizeof($params)) {
@@ -78,7 +73,6 @@ class Rest extends AbstractController
     /**
      * {@inheritdoc}
      *
-     * @throws ApplicationException
      * @throws NotImplementedException
      * @throws NotFoundException
      * @throws BadRequestException
@@ -86,14 +80,6 @@ class Rest extends AbstractController
      */
     public function __invoke()
     {
-        $request = app()->getRequest();
-
-        $accept = $request->getHeader('accept');
-        $accept = explode(',', $accept);
-        if (in_array("application/json", $accept)) {
-            app()->useJson(true);
-        }
-
         // everyone method can return:
         // >> 401 Unauthorized - if authorization is required
         // >> 403 Forbidden - if user don't have permissions
@@ -121,17 +107,15 @@ class Rest extends AbstractController
         switch ($this->method) {
             case Request::METHOD_GET:
                 if ($this->primary) {
+                    // @throws NotFoundException
                     $result = $this->readOne($this->primary);
-                    if (!sizeof($result)) {
-                        throw new NotFoundException();
-                    }
-                    return current($result);
+                    return [$result];
                 } else {
                     // setup default offset and limit - safe way
                     $offset = isset($this->params['offset'])?$this->params['offset']:0;
                     $limit = isset($this->params['limit'])?$this->params['limit']:10;
 
-                    if ($range = $request->getHeader('Range')) {
+                    if ($range = Request::getHeader('Range')) {
                         list(, $offset, $last) = preg_split('/[-=]/', $range);
                         // for better compatibility
                         $limit = $last - $offset;
@@ -139,7 +123,7 @@ class Rest extends AbstractController
 
                     return $this->readSet($offset, $limit, $this->params);
                 }
-                break;
+                // break
             case Request::METHOD_POST:
                 if ($this->primary) {
                     // POST + ID is incorrect behaviour
@@ -153,21 +137,25 @@ class Rest extends AbstractController
                 try {
                     $result = $this->createOne($this->data);
                     if (!$result) {
-                        // internal error
-                        throw new ApplicationException;
+                        // system can't create record with this data
+                        throw new BadRequestException();
                     }
-                    $uid = join('-', array_values($result));
-                } catch (ValidationException $e) {
-                    http_response_code(400);
-                    return ['errors' => $this->getCrud()->getErrors()];
+
+                    if (is_array($result)) {
+                        $result = join('-', array_values($result));
+                    }
+
+                } catch (ValidatorException $e) {
+                    Response::setStatusCode(400);
+                    return ['errors' => $e->getErrors()];
                 }
 
-                http_response_code(201);
-                header(
-                    'Location: '.app()->getRouter()->url($request->getModule(), $request->getController()).'/'.$uid
+                Response::setStatusCode(201);
+                Response::setHeader(
+                    'Location',
+                    Router::getUrl(Request::getModule(), Request::getController()).'/'.$result
                 );
                 return false; // disable view
-                break;
             case Request::METHOD_PATCH:
             case Request::METHOD_PUT:
                 if (!sizeof($this->data)) {
@@ -186,38 +174,31 @@ class Rest extends AbstractController
                     // if $result === 0 it's means a update is not apply
                     // or records not found
                     if (0 === $result) {
-                        http_response_code(304);
+                        Response::setStatusCode(304);
                     }
-                } catch (ValidationException $e) {
-                    http_response_code(400);
-                    return ['errors' => $this->getCrud()->getErrors()];
+                } catch (ValidatorException $e) {
+                    Response::setStatusCode(400);
+                    return ['errors' => $e->getErrors()];
                 }
                 return false; // disable view
-                break;
             case Request::METHOD_DELETE:
                 if ($this->primary) {
                     // delete one
-                    $result = $this->deleteOne($this->primary);
+                    // @throws NotFoundException
+                    $this->deleteOne($this->primary);
                 } else {
                     // delete collection
+                    // @throws NotFoundException
                     if (!sizeof($this->data)) {
                         // data not exist
                         throw new BadRequestException();
                     }
-                    $result = $this->deleteSet($this->data);
+                    $this->deleteSet($this->data);
                 }
-                // if $result === 0 it's means a update is not apply
-                // or records not found
-                if (0 === $result) {
-                    throw new NotFoundException();
-                } else {
-                    http_response_code(204);
-                }
+                Response::setStatusCode(204);
                 return false; // disable view
-                break;
             default:
                 throw new NotImplementedException();
-                break;
         }
     }
 }

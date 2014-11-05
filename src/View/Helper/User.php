@@ -12,16 +12,15 @@
 namespace Bluz\View\Helper;
 
 use Bluz\View\View;
+use Bluz\Proxy\Auth;
 
 return
     /**
-     * get current user
+     * Get current user
      *
+     * @var View $this
      * @return \Bluz\Auth\AbstractRowEntity|null
      */
     function () {
-    /** @var View $this */
-    return app()->getAuth() ?
-        app()->getAuth()->getIdentity() :
-        null;
+        return Auth::getIdentity();
     };

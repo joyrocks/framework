@@ -42,10 +42,53 @@ namespace Bluz\Common;
 trait Options
 {
     /**
-     * Options store
-     * @var array
+     * @var array Options store
      */
     protected $options;
+
+    /**
+     * Get option by key
+     * @param string $key
+     * @param string|null $subKey
+     * @return mixed
+     */
+    public function getOption($key, $subKey = null)
+    {
+        if (isset($this->options[$key])) {
+            if (!is_null($subKey)) {
+                return isset($this->options[$key][$subKey])?$this->options[$key][$subKey]:null;
+            } else {
+                return $this->options[$key];
+            }
+        } else {
+            return null;
+        }
+    }
+
+    /**
+     * Set option by key over setter
+     * @param string $key
+     * @param string $value
+     * @return void
+     */
+    public function setOption($key, $value)
+    {
+        $method = 'set' . $this->normalizeKey($key);
+        if (method_exists($this, $method)) {
+            $this->$method($value);
+        } else {
+            $this->options[$key] = $value;
+        }
+    }
+
+    /**
+     * Get all options
+     * @return array
+     */
+    public function getOptions()
+    {
+        return $this->options;
+    }
 
     /**
      * Setup, check and init options
@@ -64,10 +107,7 @@ trait Options
 
         // apply options
         foreach ($this->options as $key => $value) {
-            $method = 'set' . $this->normalizeKey($key);
-            if (method_exists($this, $method)) {
-                $this->$method($value);
-            }
+            $this->setOption($key, $value);
         }
 
         // check options
@@ -80,20 +120,9 @@ trait Options
     }
 
     /**
-     * Get all options
-     *
-     * @return array
-     */
-    public function getOptions()
-    {
-        return $this->options;
-    }
-
-    /**
-     * Validation
-     *
+     * Check options in package
      * @throws \Bluz\Config\ConfigException
-     * @return boolean
+     * @return bool
      */
     protected function checkOptions()
     {
@@ -101,8 +130,7 @@ trait Options
     }
 
     /**
-     * Initialization
-     *
+     * Initialization for options
      * @throws \Bluz\Config\ConfigException
      * @return void
      */
@@ -112,29 +140,13 @@ trait Options
     }
 
     /**
-     * Get option by key
-     *
-     * @param string $key
-     * @return mixed
-     */
-    public function getOption($key)
-    {
-        if (isset($this->options[$key])) {
-            return $this->options[$key];
-        } else {
-            return false;
-        }
-    }
-
-    /**
      * Normalize key name
-     *
-     * @param  $key
-     * @return mixed
+     * @param  string $key
+     * @return string
      */
     private function normalizeKey($key)
     {
-        $option = str_replace('_', ' ', strtolower($key));
+        $option = str_replace(['_', '-'], ' ', strtolower($key));
         $option = str_replace(' ', '', ucwords($option));
         return $option;
     }

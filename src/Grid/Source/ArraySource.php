@@ -26,14 +26,14 @@ class ArraySource extends AbstractSource
     /**
      * setSource
      *
-     * @param $source
+     * @param array $source
      * @throws Grid\GridException
      * @return self
      */
     public function setSource($source)
     {
         if (!is_array($source) && !($source instanceof \ArrayAccess)) {
-            throw new Grid\GridException("Source of ArraySource should be array or implement ArrayAccess interface");
+            throw new Grid\GridException("Source of `ArraySource` should be array or implement ArrayAccess interface");
         }
 
         $this->source = $source;
@@ -51,7 +51,6 @@ class ArraySource extends AbstractSource
     public function process(array $settings = [])
     {
         $data = $this->source;
-
         // process filters
         if (!empty($settings['filters'])) {
             $data = array_filter(
@@ -92,14 +91,14 @@ class ArraySource extends AbstractSource
                                     }
                                     break;
                                 case Grid\Grid::FILTER_LIKE:
-                                    if (preg_match('/'.$value.'/', $row[$column])) {
+                                    if (!preg_match('/'.$value.'/', $row[$column])) {
                                         return false;
                                     }
                                     break;
                             }
                         }
-                        return true;
                     }
+                    return true;
                 }
             );
         }

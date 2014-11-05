@@ -15,8 +15,7 @@ use Bluz\Application\Exception\ReloadException;
 
 return
     /**
-     * reload current page
-     * please, be careful to avoid loop of reload
+     * Reload current page please, be careful to avoid loop of reload
      * @throws ReloadException
      * @return void
      */
