@@ -12,7 +12,7 @@
 namespace Bluz\Cache\Adapter;
 
 use Bluz\Cache\Cache;
-use Bluz\Cache\InvalidArgumentException;
+use Bluz\Cache\CacheException;
 
 /**
  * Adapter that caches data into php array.
@@ -66,7 +66,12 @@ class PhpFile extends FileBase
             return false;
         }
 
-        $cacheEntry = include $filename;
+        if (defined('HHVM_VERSION')) {
+            // XXX: workaround for https://github.com/facebook/hhvm/issues/1447
+            $cacheEntry = eval(str_replace('<?php', '', file_get_contents($filename)));
+        } else {
+            $cacheEntry = include $filename;
+        }
 
         if ($cacheEntry['ttl'] !== Cache::TTL_NO_EXPIRY && $cacheEntry['ttl'] < time()) {
             return false;
@@ -82,7 +87,7 @@ class PhpFile extends FileBase
      * @param mixed $data
      * @param int $ttl
      * @return integer The number of bytes that were written to the file, or false on failure.
-     * @throws InvalidArgumentException
+     * @throws CacheException
      */
     protected function doSet($id, $data, $ttl = Cache::TTL_NO_EXPIRY)
     {
@@ -92,7 +97,7 @@ class PhpFile extends FileBase
 
         // if we have an array containing objects - we will have a problem.
         if (is_object($data) && !method_exists($data, '__set_state')) {
-            throw new InvalidArgumentException(
+            throw new CacheException(
                 "Invalid argument given, PhpFileAdapter only allows objects that implement __set_state() " .
                 "and fully support var_export()."
             );
@@ -113,7 +118,7 @@ class PhpFile extends FileBase
         $cacheEntry = var_export($cacheEntry, true);
         $code = sprintf('<?php return %s;', $cacheEntry);
 
-        return file_put_contents($fileName, $code);
+        return $this->writeFile($fileName, $code);
     }
 
     /**
@@ -123,7 +128,7 @@ class PhpFile extends FileBase
      * @param mixed $data
      * @param int $ttl
      * @return bool|int
-     * @throws InvalidArgumentException
+     * @throws CacheException
      */
     protected function doAdd($id, $data, $ttl = Cache::TTL_NO_EXPIRY)
     {

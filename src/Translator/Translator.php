@@ -15,10 +15,10 @@ use Bluz\Common\Exception\ConfigurationException;
 use Bluz\Common\Options;
 
 /**
- * Translator
- * based on gettext library
+ * Translator based on gettext library
  *
  * @package  Bluz\Translator
+ * @link     https://github.com/bluzphp/framework/wiki/Translator
  *
  * @author   Anton Shevchuk
  * @created  23.04.13 16:37
@@ -146,11 +146,16 @@ class Translator
      * equal to <code>sprintf(gettext('Message to %s'), 'Username')</code>
      *     Translator::translate('Message to %s', 'Username');
      *
+     * @api
      * @param string $message
      * @return string
      */
     public static function translate($message)
     {
+        if (empty($message)) {
+            return $message;
+        }
+
         if (function_exists('gettext')) {
             $message = gettext($message);
         }
@@ -174,6 +179,7 @@ class Translator
      * equal to <code>sprintf(ngettext('%d comment', '%d comments', 4), 4, 'Topic')</code>
      *     Translator::translatePlural('%d comment to %s', '%d comments to %s', 4, 'Topic')
      *
+     * @api
      * @link http://docs.translatehouse.org/projects/localization-guide/en/latest/l10n/pluralforms.html
      * @param string $singular
      * @param string $plural

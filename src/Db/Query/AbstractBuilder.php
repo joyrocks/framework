@@ -18,8 +18,8 @@ use Bluz\Proxy\Db;
  * Based on Doctrine QueryBuilder code
  *
  * @package Bluz\Db\Query
- *
- * @link https://github.com/doctrine/dbal/blob/master/lib/Doctrine/DBAL/Query/QueryBuilder.php
+ * @link    https://github.com/bluzphp/framework/wiki/Db-Query
+ * @link    https://github.com/doctrine/dbal/blob/master/lib/Doctrine/DBAL/Query/QueryBuilder.php
  */
 abstract class AbstractBuilder
 {
@@ -61,7 +61,7 @@ abstract class AbstractBuilder
     /**
      * Execute this query using the bound parameters and their types
      *
-     * @return mixed
+     * @return integer|string|array
      */
     public function execute()
     {

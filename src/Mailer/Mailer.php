@@ -19,7 +19,6 @@ use Bluz\Common\Options;
  * Wrapper over PHPMailer
  *
  * @package  Bluz\Mailer
- *
  * @link     https://github.com/bluzphp/framework/wiki/Mailer
  *
  * @author   Pavel Machekhin
@@ -49,7 +48,7 @@ class Mailer
 
     /**
      * Creates new instance of PHPMailer and set default options from config
-     *
+     * @api
      * @throws ComponentException
      * @throws \phpmailerException
      * @return \PHPMailer
@@ -93,12 +92,11 @@ class Mailer
 
     /**
      * Send email
-     *
-     * @todo Add mail to queue
-     *
+     * @api
      * @param \PHPMailer $mail
      * @return bool
      * @throws MailerException
+     * @todo Add mail to queue
      */
     public function send(\PHPMailer $mail)
     {

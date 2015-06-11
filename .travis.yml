@@ -3,21 +3,24 @@ php:
   - 5.4
   - 5.5
   - 5.6
+  - 7.0
   - hhvm
 matrix:
   allow_failures:
     - php: hhvm
-before_script:
+install:
   # Composer
-  - COMPOSER_ROOT_VERSION=dev-master composer --prefer-source --dev install
   - composer self-update
-  - composer update --prefer-source
+  - COMPOSER_ROOT_VERSION=dev-master composer --dev install
   # Database
   - mysql -e 'CREATE DATABASE bluz;'
+before_script:
+  # Database
   - mysql -uroot bluz < tests/dump.sql
-script:
+  # Directories
   - mkdir .reports
   - chmod a+w ./tests/cache
+script:
   # Code style
   - php vendor/bin/phpcs ./src --standard=PSR1 --encoding=utf-8
   - php vendor/bin/phpcs ./src --standard=PSR2 --encoding=utf-8
@@ -37,6 +40,13 @@ script:
 after_script:
   - php vendor/bin/coveralls -v
   - wget https://scrutinizer-ci.com/ocular.phar
-  - php ocular.phar code-coverage:upload --format=php-clover .reports/clover.xml
+  - sh -c 'if [ "$TRAVIS_PHP_VERSION" != "hhvm" ]; then php ocular.phar code-coverage:upload --format=php-clover .reports/clover.xml; fi;'
 notifications:
   email: false
+  webhooks:
+    urls:
+      - https://webhooks.gitter.im/e/b84e6a583d6eea87d0eb
+      - https://webhooks.gitter.im/e/c4fa557829c5bd992271
+    on_success: change  # options: [always|never|change] default: always
+    on_failure: always  # options: [always|never|change] default: always
+    on_start: false     # default: false

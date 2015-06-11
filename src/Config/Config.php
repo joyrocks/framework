@@ -15,6 +15,7 @@ namespace Bluz\Config;
  * Config
  *
  * @package  Bluz\Config
+ * @link     https://github.com/bluzphp/framework/wiki/Config
  *
  * @author   Anton Shevchuk
  * @created  03.03.12 14:03
@@ -128,6 +129,7 @@ class Config
 
     /**
      * Return configuration by key
+     * @api
      * @param string|null $key of config
      * @param string|null $section of config
      * @throws ConfigException
@@ -135,27 +137,34 @@ class Config
      */
     public function getData($key = null, $section = null)
     {
-        if (!$this->config) {
+        // configuration is missed
+        if (is_null($this->config)) {
             throw new ConfigException('System configuration is missing');
         }
 
-        if (!is_null($key) && isset($this->config[$key])) {
-            if ($section
+        // return all configuration
+        if (is_null($key)) {
+            return $this->config;
+        }
+
+        // return part of configuration
+        if (isset($this->config[$key])) {
+            // return section of configuration
+            if (!is_null($section)
                 && isset($this->config[$key][$section])
             ) {
                 return $this->config[$key][$section];
             } else {
                 return $this->config[$key];
             }
-        } elseif (!is_null($key)) {
-            return null;
         } else {
-            return $this->config;
+            return null;
         }
     }
 
     /**
      * Return module configuration by section
+     * @api
      * @param string $module
      * @param null $section
      * @return mixed
@@ -167,7 +176,7 @@ class Config
                 $this->path .'/modules/'. $module .'/config.php'
             );
 
-            if (!$this->config) {
+            if (is_null($this->config)) {
                 $this->init();
             }
 

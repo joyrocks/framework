@@ -33,7 +33,7 @@ abstract class FileBase extends AbstractAdapter
      * Extension of cache files
      * @var string
      */
-    protected $extension = ".bluzcache";
+    protected $extension = ".cache";
 
     /**
      * Check configuration and permissions
@@ -82,6 +82,17 @@ abstract class FileBase extends AbstractAdapter
     }
 
     /**
+     * {@inheritdoc}
+     *
+     * @param string $id
+     * @return bool|mixed
+     */
+    protected function doDelete($id)
+    {
+        return @unlink($this->getFilename($id));
+    }
+
+    /**
      * Generate path to cache file based on cache entry id
      *
      * @param string $id cache entry id
@@ -98,13 +109,23 @@ abstract class FileBase extends AbstractAdapter
     }
 
     /**
-     * {@inheritdoc}
+     * Write string to the file in an atomic way
      *
-     * @param string $id
-     * @return bool|mixed
+     * @param string $fileName
+     * @param string $content
+     * @return bool|int The number of bytes that were written to the file, or false on failure
      */
-    protected function doDelete($id)
+    protected function writeFile($fileName, $content)
     {
-        return @unlink($this->getFilename($id));
+        $tempFileName = $fileName . uniqid('', true) . '.temp';
+        $bytes = file_put_contents($tempFileName, $content);
+        if ($bytes !== false) {
+            if (rename($tempFileName, $fileName)) {
+                return $bytes;
+            }
+            @unlink($tempFileName);
+        }
+
+        return false;
     }
 }

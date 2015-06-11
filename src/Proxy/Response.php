@@ -73,10 +73,21 @@ use Bluz\View\View;
  * @method   static void  clearBody()
  * @see      Bluz\Response\AbstractResponse::clearBody()
  *
+ * @method   static void  setCookie()
+ * @see      Bluz\Response\AbstractResponse::setCookie($name, $value = null, $expire = 0, $path = '/', $domain = null,
+ *              $secure = null, $httpOnly = null)
+ * @method   static array getCookie()
+ * @see      Bluz\Response\AbstractResponse::getCookie()
+ *
  * @method   static void  setException($exception)
  * @see      Bluz\Response\AbstractResponse::setException()
  * @method   static \Exception getException()
  * @see      Bluz\Response\AbstractResponse::getException()
+ *
+ * @method   static void  setPresentation($presentation)
+ * @see      Bluz\Response\AbstractResponse::setPresentation()
+ * @method   static \Exception getPresentation()
+ * @see      Bluz\Response\AbstractResponse::getPresentation()
  *
  * @author   Anton Shevchuk
  * @created  29.09.2014 12:15

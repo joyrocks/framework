@@ -43,13 +43,13 @@ class Length extends AbstractCompareRule
         $this->maxValue = $max;
         $this->inclusive = $inclusive;
 
-        if ($min && !is_numeric($min)) {
+        if (!is_null($min) && !is_numeric($min)) {
             throw new ComponentException(
                 __('"%s" is not a valid numeric length', $min)
             );
         }
 
-        if ($max && !is_numeric($max)) {
+        if (!is_null($max) && !is_numeric($max)) {
             throw new ComponentException(
                 __('"%s" is not a valid numeric length', $max)
             );
@@ -80,7 +80,7 @@ class Length extends AbstractCompareRule
     /**
      * Extract length
      * @param string $input
-     * @return integer
+     * @return integer|false
      */
     protected function extractLength($input)
     {

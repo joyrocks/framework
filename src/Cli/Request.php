@@ -32,6 +32,7 @@ class Request extends AbstractRequest
     public function __construct()
     {
         $this->method = self::METHOD_CLI;
+        $this->accept = self::ACCEPT_CLI;
 
         $arguments = getopt("u:", ["uri:"]);
 
@@ -51,7 +52,7 @@ class Request extends AbstractRequest
 
         $this->setRequestUri($uri);
 
-        if ($query) {
+        if (!empty($query)) {
             parse_str($query, $params);
             if (is_array($params)) {
                 $this->setParams($params);
@@ -99,5 +100,26 @@ class Request extends AbstractRequest
     public function getClientIp()
     {
         return '127.0.0.1';
+    }
+
+    /**
+     * Return false for CLI
+     *
+     * @param string $header HTTP header name
+     * @return false HTTP header not found
+     */
+    public function getHeader($header)
+    {
+        return false;
+    }
+
+
+    /**
+     * Accept only CLI
+     * @return string
+     */
+    public function getAccept()
+    {
+        return $this->accept;
     }
 }

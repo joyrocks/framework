@@ -42,12 +42,16 @@ class Reflection
     protected $cacheHtml = 0;
 
     /**
+     * @var array Accept
+     */
+    protected $accept = array();
+
+    /**
      * @var array HTTP Methods
      */
     protected $method = array();
 
     /**
-     *
      * @var array Described params
      */
     protected $params = array();
@@ -77,6 +81,20 @@ class Reflection
     }
 
     /**
+     * Set state required for working with var_export (used inside PHP File cache)
+     * @param $array
+     * @return Reflection
+     */
+    public static function __set_state($array)
+    {
+        $instance = new Reflection($array['file']);
+        foreach ($array as $key => $value) {
+            $instance->{$key} = $value;
+        }
+        return $instance;
+    }
+
+    /**
      * Process to get reflection from file
      * @throws ComponentException
      * @return void
@@ -92,7 +110,7 @@ class Reflection
             throw new ComponentException("There is no callable structure in file `{$this->file}`");
         }
 
-        if ('Closure' == get_class($closure)) {
+        if ($closure instanceof \Closure) {
             $reflection = new \ReflectionFunction($closure);
         } else {
             $reflection = new \ReflectionObject($closure);
@@ -175,6 +193,16 @@ class Reflection
     }
 
     /**
+     * Get path to file
+     *
+     * @return string
+     */
+    public function getFile()
+    {
+        return $this->file;
+    }
+
+    /**
      * Get Cache TTL
      * @return int
      */
@@ -235,6 +263,25 @@ class Reflection
     }
 
     /**
+     * Get accepted type
+     * @return array|null
+     */
+    public function getAccept()
+    {
+        return sizeof($this->accept)?$this->accept:null;
+    }
+
+    /**
+     * Set accepted types
+     * @param string $accept
+     * @return void
+     */
+    public function setAccept($accept)
+    {
+        $this->accept[] = strtoupper($accept);
+    }
+
+    /**
      * Get HTTP Method
      * @return array|null
      */
@@ -250,7 +297,7 @@ class Reflection
      */
     public function setMethod($method)
     {
-        $this->method[] = $method;
+        $this->method[] = strtoupper($method);
     }
 
     /**
@@ -275,7 +322,8 @@ class Reflection
             return;
         }
 
-        list($type, $key) = preg_split('/\$/', $param);
+        list($type, $key) = preg_split('/[ $]+/', $param);
+
         $this->params[$key] = trim($type);
     }
 

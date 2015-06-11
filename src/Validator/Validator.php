@@ -115,6 +115,10 @@ class Validator
      */
     public function __call($ruleName, $arguments)
     {
+        if (in_array($ruleName, ['float', 'string'])) {
+            $ruleName .= 'Rule';
+        }
+
         $ruleClass = '\\Bluz\\Validator\\Rule\\' . ucfirst($ruleName);
 
         if (!class_exists($ruleClass)) {
@@ -197,7 +201,6 @@ class Validator
         $this->input = $input;
         $this->invalid = array(); // clean
         foreach ($this->rules as $rule) {
-
             if (!$rule->validate($this->input)) {
                 $this->invalid[] = $rule;
                 if (!$all) {

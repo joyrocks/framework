@@ -22,6 +22,7 @@ use Bluz\Validator\Exception\ValidatorException;
  * Crud controller
  *
  * @package  Bluz\Controller
+ * @link     https://github.com/bluzphp/framework/wiki/Controller-Crud
  *
  * @author   Anton Shevchuk
  * @created  15.08.12 15:37
@@ -46,7 +47,7 @@ class Crud extends AbstractController
                 $row = $this->readOne($primary);
 
                 $result = ['row' => $row];
-                if ($primary) {
+                if (!empty($primary)) {
                     // update form
                     $result['method'] = Request::METHOD_PUT;
                 } else {
@@ -110,7 +111,7 @@ class Crud extends AbstractController
      */
     public function getPrimaryKey()
     {
-        if (!$this->primary) {
+        if (is_null($this->primary)) {
             $primary = $this->getCrud()->getPrimaryKey();
             $this->primary = array_intersect_key($this->data, array_flip($primary));
         }

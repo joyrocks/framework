@@ -18,13 +18,10 @@ use Bluz\Common\Options;
  * Session
  *
  * @package  Bluz\Session
+ * @link     https://github.com/bluzphp/framework/wiki/Session
  *
  * @author   Anton Shevchuk
  * @created  11.07.11 19:19
- *
- * @property mixed MessagesStore
- * @property \Bluz\Auth\EntityInterface identity Users\Row object
- * @property string agent - user agent
  */
 class Session
 {
@@ -173,7 +170,7 @@ class Session
 
     /**
      * Does a session started and is it currently active?
-     *
+     * @api
      * @return bool
      */
     public function sessionExists()
@@ -195,6 +192,7 @@ class Session
      * {@link isValid()} once session_start() is called, and raises an
      * exception if validation fails.
      *
+     * @api
      * @return void
      * @throws SessionException
      */
@@ -211,7 +209,7 @@ class Session
 
     /**
      * Destroy/end a session
-     *
+     * @api
      * @return void
      */
     public function destroy()
@@ -231,7 +229,6 @@ class Session
 
     /**
      * Set session save handler object
-     *
      * @param  \SessionHandlerInterface $saveHandler
      * @return Session
      */
@@ -243,7 +240,6 @@ class Session
 
     /**
      * Get SaveHandler Object
-     *
      * @return \SessionHandlerInterface
      */
     public function getAdapter()
@@ -344,7 +340,7 @@ class Session
 
     /**
      * Set key/value pair
-     *
+     * @api
      * @param  string $key
      * @param  mixed $value
      * @return void
@@ -361,7 +357,7 @@ class Session
 
     /**
      * Get value by key
-     *
+     * @api
      * @param  string $key
      * @return mixed
      */
@@ -376,7 +372,7 @@ class Session
 
     /**
      * Isset
-     *
+     * @api
      * @param  string $key
      * @return bool
      */
@@ -384,22 +380,21 @@ class Session
     {
         if ($this->cookieExists()) {
             $this->start();
-            return isset($_SESSION[$this->namespace][$key]);
-        } else {
+        } elseif (!$this->sessionExists()) {
             return false;
         }
+        return isset($_SESSION[$this->namespace][$key]);
     }
 
     /**
      * Unset
-     *
+     * @api
      * @param  string $key
      * @return void
      */
     public function delete($key)
     {
-        if ($this->cookieExists()) {
-            $this->start();
+        if ($this->contains($key)) {
             unset($_SESSION[$this->namespace][$key]);
         }
     }

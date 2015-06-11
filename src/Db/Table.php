@@ -34,6 +34,8 @@ use Bluz\Proxy\Db as DbProxy;
  *     }
  *
  * @package  Bluz\Db
+ * @link     https://github.com/bluzphp/framework/wiki/Db-Table
+ *
  * @author   Anton Shevchuk
  * @created  08.07.11 17:32
  */
@@ -468,7 +470,7 @@ abstract class Table
 
         $table = DbProxy::quoteIdentifier($self->table);
 
-        $sql = "INSERT INTO $table SET " . join(',', static::prepareStatement($data));
+        $sql = "INSERT INTO $table SET " . join(',', self::prepareStatement($data));
         $result = DbProxy::query($sql, array_values($data));
         if (!$result) {
             return null;
@@ -520,8 +522,8 @@ abstract class Table
         $table = DbProxy::quoteIdentifier($self->table);
 
         $sql = "UPDATE $table"
-            . " SET " . join(',', static::prepareStatement($data))
-            . " WHERE " . join(' AND ', static::prepareStatement($where));
+            . " SET " . join(',', self::prepareStatement($data))
+            . " WHERE " . join(' AND ', self::prepareStatement($where));
 
         return DbProxy::query($sql, array_merge(array_values($data), array_values($where)));
     }
@@ -530,7 +532,7 @@ abstract class Table
      * Deletes existing rows
      *
      *     Table::delete(['login' => 'Man'])
-     * 
+     *
      * @param  array $where An array of SQL WHERE clause(s)
      * @throws Exception\DbException
      * @return integer The number of rows deleted
@@ -557,7 +559,7 @@ abstract class Table
         $table = DbProxy::quoteIdentifier($self->table);
 
         $sql = "DELETE FROM $table"
-            . " WHERE " . join(' AND ', static::prepareStatement($where));
+            . " WHERE " . join(' AND ', self::prepareStatement($where));
         return DbProxy::query($sql, array_values($where));
     }
 }

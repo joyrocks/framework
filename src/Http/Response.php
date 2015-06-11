@@ -11,6 +11,7 @@
  */
 namespace Bluz\Http;
 
+use Bluz\Proxy\Request as ProxyRequest;
 use Bluz\Response\AbstractResponse;
 
 /**
@@ -39,6 +40,11 @@ class Response extends AbstractResponse
         // setup response code
         http_response_code($this->code);
 
+        // send stored cookies
+        foreach ($this->cookies as $cookie) {
+            call_user_func_array('setcookie', array_values($cookie));
+        }
+
         // send stored headers
         foreach ($this->headers as $key => $value) {
             header($key .': '. join(', ', $value));
@@ -51,6 +57,18 @@ class Response extends AbstractResponse
      */
     protected function sendBody()
     {
-        echo $this->body;
+        // Nobody for HEAD and OPTIONS
+        if (Request::METHOD_HEAD == ProxyRequest::getMethod()
+            || Request::METHOD_OPTIONS == ProxyRequest::getMethod()) {
+            return;
+        };
+
+        // Body can be Closures
+        $content = $this->body;
+        if ($content instanceof \Closure) {
+            $content();
+        } else {
+            echo $content;
+        }
     }
 }

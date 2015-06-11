@@ -17,6 +17,7 @@ use Bluz\Common\Options;
  * Request
  *
  * @package  Bluz\Request
+ * @link     https://github.com/bluzphp/framework/wiki/Request
  *
  * @author   Anton Shevchuk
  * @created  06.07.11 16:59
@@ -49,6 +50,15 @@ class AbstractRequest
     const METHOD_HTTP = 'HTTP';
 
     /**
+     * @const string HTTP ACCEPT MIME types
+     */
+    const ACCEPT_CLI = 'CLI';
+    const ACCEPT_HTML = 'HTML';
+    const ACCEPT_JSON = 'JSON';
+    const ACCEPT_JSONP = 'JSONP';
+    const ACCEPT_XML = 'XML';
+
+    /**
      * REQUEST_URI
      * @var string;
      */
@@ -71,6 +81,12 @@ class AbstractRequest
      * @var string;
      */
     protected $basePath;
+
+    /**
+     * HTTP Accept Mime Type or CLI
+     * @var string
+     */
+    protected $accept;
 
     /**
      * HTTP Method or CLI

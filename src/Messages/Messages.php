@@ -19,6 +19,7 @@ use Bluz\Proxy\Translator;
  * Realization of Flash Messages
  *
  * @package  Bluz\Messages
+ * @link     https://github.com/bluzphp/framework/wiki/Messages
  *
  * @author   Anton Shevchuk
  */
@@ -54,6 +55,7 @@ class Messages
 
     /**
      * Add notice
+     * @api
      * @param string $text
      * @return void
      */
@@ -64,6 +66,7 @@ class Messages
 
     /**
      * Add success
+     * @api
      * @param string $text
      * @return void
      */
@@ -74,6 +77,7 @@ class Messages
 
     /**
      * Add error
+     * @api
      * @param string $text
      * @return void
      */
@@ -105,7 +109,7 @@ class Messages
             return null;
         }
 
-        if ($type) {
+        if ($type !== null) {
             $text = array_shift($this->getMessagesStore()[$type]);
             if ($text) {
                 $message = new \stdClass();

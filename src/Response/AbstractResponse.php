@@ -12,12 +12,14 @@
 namespace Bluz\Response;
 
 use Bluz\Common\Options;
+use Bluz\Response\Presentation\AbstractPresentation;
 use Bluz\View\View;
 
 /**
  * AbstractResponse
  *
  * @package  Bluz\Response
+ * @link     https://github.com/bluzphp/framework/wiki/Response
  *
  * @author   Anton Shevchuk
  * @created  18.02.14 11:11
@@ -47,7 +49,12 @@ abstract class AbstractResponse
     protected $headers = array();
 
     /**
-     * @var View Result can be View|object|function
+     * @var array Stack of cookies
+     */
+    protected $cookies = array();
+
+    /**
+     * @var mixed Result can be View|object|function
      */
     protected $body;
 
@@ -55,6 +62,11 @@ abstract class AbstractResponse
      * @var \Exception Catches exception
      */
     protected $exception;
+
+    /**
+     * @var string|AbstractPresentation Support JSON, JSONP, XML, CLI
+     */
+    protected $presentation;
 
     /**
      * Send messages to client
@@ -75,6 +87,15 @@ abstract class AbstractResponse
      */
     public function send()
     {
+        // Apply presentation metamorphosis
+        if ($this->presentation) {
+            if (is_string($this->presentation)) {
+                $presentationClass = '\\Bluz\\Response\\Presentation\\'.ucfirst(strtolower($this->presentation));
+                $this->presentation = new $presentationClass($this);
+            }
+
+            $this->presentation->process();
+        }
         $this->sendHeaders();
         $this->sendBody();
     }
@@ -295,7 +316,7 @@ abstract class AbstractResponse
 
     /**
      * Set response body
-     * @param View|string $body
+     * @param mixed $body
      * @return void
      */
     public function setBody($body)
@@ -322,6 +343,68 @@ abstract class AbstractResponse
     }
 
     /**
+     * Set Cookie
+     *
+     * @param string $name
+     * @param string $value
+     * @param int|string|\DateTime $expire
+     * @param string $path
+     * @param string $domain
+     * @param bool $secure
+     * @param bool $httpOnly
+     * @return void
+     */
+    public function setCookie(
+        $name,
+        $value = null,
+        $expire = 0,
+        $path = '/',
+        $domain = null,
+        $secure = false,
+        $httpOnly = true
+    ) {
+        // from PHP source code
+        if (preg_match("/[=,; \t\r\n\013\014]/", $name)) {
+            throw new \InvalidArgumentException('The cookie name contains invalid characters.');
+        }
+
+        if (empty($name)) {
+            throw new \InvalidArgumentException('The cookie name cannot be empty.');
+        }
+
+        // convert expiration time to a Unix timestamp
+        if ($expire instanceof \DateTime) {
+            $expire = $expire->format('U');
+        } elseif (!is_numeric($expire)) {
+            $expire = strtotime($expire);
+            if (false === $expire || -1 === $expire) {
+                throw new \InvalidArgumentException('The cookie expiration time is not valid.');
+            }
+        }
+
+        $this->cookies[$name] = [
+            'name' => $name,
+            'value' => $value,
+            'expire' => $expire,
+            'path' => empty($path) ? '/' : $path,
+            'domain' => $domain,
+            'secure' => (bool) $secure,
+            'httpOnly' => (bool) $httpOnly
+        ];
+    }
+
+    /**
+     * Get Cookie by name
+     *
+     * @param string $name
+     * @return array|null
+     */
+    public function getCookie($name)
+    {
+        return isset($this->cookies[$name])?$this->cookies[$name]:null;
+    }
+
+    /**
      * Set Exception
      * @param \Exception $exception
      * @return void
@@ -340,5 +423,24 @@ abstract class AbstractResponse
     public function getException()
     {
         return $this->exception;
+    }
+
+    /**
+     * Set Presentation
+     * @param string $presentation
+     * @return void
+     */
+    public function setPresentation($presentation)
+    {
+        $this->presentation = $presentation;
+    }
+
+    /**
+     * Get Presentation
+     * @return string
+     */
+    public function getPresentation()
+    {
+        return $this->presentation;
     }
 }

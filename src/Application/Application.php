@@ -13,6 +13,8 @@ namespace Bluz\Application;
 
 use Bluz\Application\Exception\ApplicationException;
 use Bluz\Application\Exception\ForbiddenException;
+use Bluz\Application\Exception\NotAcceptableException;
+use Bluz\Application\Exception\NotAllowedException;
 use Bluz\Application\Exception\RedirectException;
 use Bluz\Application\Exception\ReloadException;
 use Bluz\Auth\AbstractRowEntity;
@@ -22,7 +24,6 @@ use Bluz\Http;
 use Bluz\Proxy\Acl;
 use Bluz\Proxy\Cache;
 use Bluz\Proxy\Config;
-use Bluz\Proxy\Db;
 use Bluz\Proxy\Layout;
 use Bluz\Proxy\Logger;
 use Bluz\Proxy\Messages;
@@ -37,6 +38,7 @@ use Bluz\View\View;
  * Application
  *
  * @package  Bluz\Application
+ * @link     https://github.com/bluzphp/framework/wiki/Application
  *
  * @method void denied()
  * @method void redirect(string $url)
@@ -78,6 +80,11 @@ class Application
     protected $jsonFlag = false;
 
     /**
+     * @var bool XML response flag
+     */
+    protected $xmlFlag = false;
+
+    /**
      * @var array Stack of widgets closures
      */
     protected $widgets = array();
@@ -116,6 +123,7 @@ class Application
 
     /**
      * Check debug flag
+     * @api
      * @return bool
      */
     public function isDebug()
@@ -125,6 +133,8 @@ class Application
 
     /**
      * Check Json flag
+     * @api
+     * @deprecated since 0.9
      * @return bool
      */
     public function isJson()
@@ -133,7 +143,19 @@ class Application
     }
 
     /**
+     * Check XML flag
+     * @api
+     * @deprecated since 0.9
+     * @return bool
+     */
+    public function isXml()
+    {
+        return $this->xmlFlag;
+    }
+
+    /**
      * Check Layout flag
+     * @api
      * @return bool
      */
     public function hasLayout()
@@ -143,8 +165,9 @@ class Application
 
     /**
      * Set Layout template and/or flag
+     * @api
      * @param bool|string $flag
-     * @return Application
+     * @return void
      */
     public function useLayout($flag = true)
     {
@@ -154,22 +177,42 @@ class Application
         } else {
             $this->layoutFlag = $flag;
         }
-        return $this;
     }
 
     /**
-     * Set Json flag
-     * @param bool $flag
-     * @return Application
+     * Set JSON presentation
+     * @api
+     * @return void
      */
-    public function useJson($flag = true)
+    public function useJson()
     {
-        if ($flag) {
-            // disable view and layout for JSON output
-            $this->useLayout(false);
-        }
-        $this->jsonFlag = $flag;
-        return $this;
+        // disable view and layout for JSON output
+        $this->useLayout(false);
+        $this->getResponse()->setPresentation('json');
+    }
+
+    /**
+     * Set JSONP presentation
+     * @api
+     * @return void
+     */
+    public function useJsonp()
+    {
+        // disable view and layout for JSONP output
+        $this->useLayout(false);
+        $this->getResponse()->setPresentation('jsonp');
+    }
+
+    /**
+     * Set XML presentation
+     * @api
+     * @return void
+     */
+    public function useXml()
+    {
+        // disable view and layout for JSON output
+        $this->useLayout(false);
+        $this->getResponse()->setPresentation('xml');
     }
 
     /**
@@ -234,22 +277,6 @@ class Application
         $request = new Http\Request();
         $request->setOptions(Config::getData('request'));
 
-        // disable layout for AJAX requests
-        if ($request->isXmlHttpRequest()) {
-            $this->useLayout(false);
-        }
-
-        // check header "accept" for catch JSON requests, and switch to JSON response
-        // for AJAX and REST requests
-        if ($accept = $request->getHeader('accept')) {
-            // MIME type can be "application/json", "application/json; charset=utf-8" etc.
-            $accept = str_replace(';', ',', $accept);
-            $accept = explode(',', $accept);
-            if (in_array("application/json", $accept)) {
-                $this->useJson(true);
-            }
-        }
-
         Request::setInstance($request);
     }
 
@@ -279,15 +306,89 @@ class Application
     {
         Logger::info('app:process');
 
+        $this->preProcess();
+        $this->doProcess();
+        $this->postProcess();
+    }
+
+    /**
+     * Pre process
+     * @throws ApplicationException
+     * @return void
+     */
+    protected function preProcess()
+    {
+        Logger::info("app:process:pre");
+
         Router::process();
+
+        // disable layout for AJAX requests
+        if ($this->getRequest()->isXmlHttpRequest()) {
+            $this->useLayout(false);
+        }
+    }
+
+    /**
+     * Do process
+     * @return void
+     */
+    protected function doProcess()
+    {
+        Logger::info("app:process:do");
+
+        $module = Request::getModule();
+        $controller = Request::getController();
+        $params = Request::getAllParams();
 
         // try to dispatch controller
         try {
-            $dispatchResult = $this->dispatch(
-                Request::getModule(),
-                Request::getController(),
-                Request::getAllParams()
-            );
+            // get reflection of requested controller
+            $controllerFile = $this->getControllerFile($module, $controller);
+            $reflection = $this->reflection($controllerFile);
+
+            // check header "accept" for catch JSON(P) or XML requests, and switch presentation
+            // it's some magic for AJAX and REST requests
+            if ($produces = $reflection->getAccept()
+                and $accept = $this->getRequest()->getAccept()) {
+                // switch statement for $accept
+                switch ($accept) {
+                    case Request::ACCEPT_HTML:
+                        // with layout
+                        // without additional presentation
+                        break;
+                    case Request::ACCEPT_JSON:
+                        $this->useJson();
+                        break;
+                    case Request::ACCEPT_JSONP:
+                        $this->useJsonp();
+                        break;
+                    case Request::ACCEPT_XML:
+                        $this->useXml();
+                        break;
+                    default:
+                        // not acceptable MIME type
+                        throw new NotAcceptableException();
+                        break;
+                }
+            }
+
+            // check call method(s)
+            if ($reflection->getMethod() && !in_array(Request::getMethod(), $reflection->getMethod())) {
+                throw new NotAllowedException(join(',', $reflection->getMethod()));
+            }
+
+            // check HTML cache
+            if ($reflection->getCacheHtml() && Request::getMethod() == Request::METHOD_GET) {
+                $htmlKey = 'html:' . $module . ':' . $controller . ':' . http_build_query($params);
+                if ($cachedHtml = Cache::get($htmlKey)) {
+                    Response::setBody($cachedHtml);
+                    return;
+                }
+            }
+
+            // dispatch controller
+            $dispatchResult = $this->dispatch($module, $controller, $params);
+
         } catch (RedirectException $e) {
             Response::setException($e);
 
@@ -299,7 +400,7 @@ class Application
                 Response::setStatusCode($e->getCode());
                 Response::setHeader('Location', $e->getMessage());
             }
-            return;
+            return null;
         } catch (ReloadException $e) {
             Response::setException($e);
 
@@ -311,7 +412,7 @@ class Application
                 Response::setStatusCode($e->getCode());
                 Response::setHeader('Refresh', '0; url=' . Request::getRequestUri());
             }
-            return;
+            return null;
         } catch (\Exception $e) {
             Response::setException($e);
 
@@ -328,7 +429,6 @@ class Application
                     'message' => $e->getMessage()
                 )
             );
-
         }
 
         if ($this->hasLayout()) {
@@ -336,7 +436,25 @@ class Application
             $dispatchResult = Layout::getInstance();
         }
 
+        if (isset($htmlKey, $reflection)) {
+            // @TODO: Added ETag header
+            Cache::set($htmlKey, $dispatchResult(), $reflection->getCacheHtml());
+            Cache::addTag($htmlKey, $module);
+            Cache::addTag($htmlKey, 'html');
+            Cache::addTag($htmlKey, 'html:' . $module);
+            Cache::addTag($htmlKey, 'html:' . $module . ':' . $controller);
+        }
+
         Response::setBody($dispatchResult);
+    }
+
+    /**
+     * Post process
+     * @return void
+     */
+    protected function postProcess()
+    {
+        Logger::info("app:process:post");
     }
 
     /**
@@ -345,11 +463,12 @@ class Application
      * Call dispatch from any \Bluz\Package
      *     Application::getInstance()->dispatch($module, $controller, array $params);
      *
+     * @api
      * @param string $module
      * @param string $controller
      * @param array $params
      * @throws ApplicationException
-     * @return View|string
+     * @return View|callable
      */
     public function dispatch($module, $controller, $params = array())
     {
@@ -371,7 +490,7 @@ class Application
      */
     protected function preDispatch($module, $controller, $params = array())
     {
-        Logger::info("app:dispatch:pre: " . $module . '/' . $controller);
+        Logger::info("---:dispatch:pre: " . $module . '/' . $controller);
 
         // check privilege before run controller
         if (!$this->isAllowed($module, $controller)) {
@@ -386,26 +505,13 @@ class Application
      * @param array $params
      * @throws ApplicationException
      *
-     * @return View|string|callable
+     * @return View|callable
      */
     protected function doDispatch($module, $controller, $params = array())
     {
-        Logger::info("app:dispatch:do: " . $module . '/' . $controller);
+        Logger::info("---:dispatch:do: " . $module . '/' . $controller);
         $controllerFile = $this->getControllerFile($module, $controller);
         $reflection = $this->reflection($controllerFile);
-
-        // check method(s)
-        if ($reflection->getMethod() && !in_array(Request::getMethod(), $reflection->getMethod())) {
-            throw new ApplicationException(join(',', $reflection->getMethod()), 405);
-        }
-
-        // cache initialization
-        if ($reflection->getCacheHtml()) {
-            $htmlKey = 'html:' . $module . ':' . $controller . ':' . http_build_query($params);
-            if ($cachedHtml = Cache::get($htmlKey)) {
-                return $cachedHtml;
-            }
-        }
 
         if ($reflection->getCache()) {
             $cacheKey = 'view:' . $module . ':' . $controller . ':' . http_build_query($params);
@@ -461,7 +567,9 @@ class Application
             case ($result === false):
                 // return false is equal to disable view and layout
                 $this->useLayout(false);
-                return '';
+                return function () {
+                    // just empty closure
+                };
             case is_callable($result):
             case is_object($result):
                 // return closure is replace logic of controller
@@ -485,14 +593,6 @@ class Application
             Cache::addTag($cacheKey, 'view:' . $module . ':' . $controller);
         }
 
-        if (isset($htmlKey)) {
-            Cache::set($htmlKey, $view->render(), $reflection->getCacheHtml());
-            Cache::addTag($htmlKey, $module);
-            Cache::addTag($htmlKey, 'html');
-            Cache::addTag($htmlKey, 'html:' . $module);
-            Cache::addTag($htmlKey, 'html:' . $module . ':' . $controller);
-        }
-
         return $view;
     }
 
@@ -505,7 +605,7 @@ class Application
      */
     protected function postDispatch($module, $controller, $params = array())
     {
-        Logger::info("app:dispatch:post: " . $module . '/' . $controller);
+        Logger::info("---:dispatch:post: " . $module . '/' . $controller);
     }
 
     /**
@@ -515,30 +615,13 @@ class Application
     public function render()
     {
         Logger::info('app:render');
-
-        if ($this->isJson()) {
-            // setup messages
-            if (Messages::count()) {
-                Response::setHeader('Bluz-Notify', json_encode(Messages::popAll()));
-            }
-
-            // prepare body
-            if ($body = Response::getBody()) {
-                $body = json_encode($body);
-                // prepare to JSON output
-                Response::setBody($body);
-                // override response code so javascript can process it
-                Response::setHeader('Content-Type', 'application/json');
-                // setup content length
-                Response::setHeader('Content-Length', strlen($body));
-            }
-        }
-
         Response::send();
     }
 
     /**
      * Get Response instance
+     *
+     * @api
      * @return Http\Response
      */
     public function getResponse()
@@ -548,6 +631,8 @@ class Application
 
     /**
      * Get Request instance
+     *
+     * @api
      * @return Http\Request
      */
     public function getRequest()
@@ -561,6 +646,7 @@ class Application
      * Call widget from any \Bluz\Package
      *     Application::getInstance()->widget($module, $widget, array $params);
      *
+     * @api
      * @param string $module
      * @param string $widget
      * @param array $params
@@ -606,6 +692,7 @@ class Application
      * Call API from any \Bluz\Package
      *     Application::getInstance()->api($module, $widget, array $params);
      *
+     * @api
      * @param string $module
      * @param string $method
      * @throws ApplicationException

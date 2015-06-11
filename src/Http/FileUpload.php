@@ -151,12 +151,12 @@ class FileUpload
     }
 
     /**
-     * parseArray
+     * Parse array
      *
      * @param array|string $paramArr
      * @param array|null $argList
      *
-     * @return string
+     * @return string|array
      */
     public function parseArray($paramArr, $argList)
     {
